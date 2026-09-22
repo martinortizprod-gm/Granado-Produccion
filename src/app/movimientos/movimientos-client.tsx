@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { IconPlus, IconSearch } from "@/components/ui/icons";
+import { IconPlus, IconSearch, IconChart } from "@/components/ui/icons";
 import { ColumnPicker } from "@/components/ui/column-picker";
 import {
   RecordDetailDrawer,
@@ -13,6 +13,7 @@ import {
 import { ColDef, useColumnVisibility } from "@/components/ui/use-column-visibility";
 import { eliminarMovimiento, guardarMovimiento } from "@/app/movimientos/actions";
 import type { DatosKind } from "@/lib/movimientos/data";
+import { ResumenMovimientos } from "@/app/movimientos/resumen-movimientos";
 import {
   cantidadesPallets,
   DatosMovimientoForm,
@@ -88,6 +89,7 @@ export function MovimientosClient({
   const [idEdicion, setIdEdicion] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [resumenAbierto, setResumenAbierto] = useState(false);
 
   const colsDef = useMemo(() => {
     const cols: ColDef[] = [
@@ -241,13 +243,28 @@ export function MovimientosClient({
             Producción; el cierre de una producción ingresa stock de producto terminado.
           </p>
         </div>
-        {puedeEditar ? (
-          <button type="button" className="g-btn g-btn-primary" onClick={abrirNuevo}>
-            <IconPlus className="h-4 w-4" />
-            Nuevo movimiento
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="g-btn g-btn-icon h-9 w-9"
+            title="Gráfico"
+            aria-label="Gráfico"
+            onClick={() => setResumenAbierto(true)}
+          >
+            <IconChart className="h-4 w-4" />
           </button>
-        ) : null}
+          {puedeEditar ? (
+            <button type="button" className="g-btn g-btn-primary" onClick={abrirNuevo}>
+              <IconPlus className="h-4 w-4" />
+              Nuevo movimiento
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {resumenAbierto ? (
+        <ResumenMovimientos cfg={cfg} movimientos={filtrados} onCerrar={() => setResumenAbierto(false)} />
+      ) : null}
 
       <div className="flex flex-wrap gap-1">
         {KINDS.map((k) => (

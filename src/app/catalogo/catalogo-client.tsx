@@ -2,7 +2,8 @@
 
 import { FormEvent, ReactNode, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { IconPlus, IconSearch } from "@/components/ui/icons";
+import { IconDownload, IconPlus, IconSearch } from "@/components/ui/icons";
+import { DialogoInforme } from "@/components/ui/informe";
 import { ColumnPicker } from "@/components/ui/column-picker";
 import {
   DetalleFilas,
@@ -21,6 +22,7 @@ import {
   CATALOGOS,
   DatosCatalogoForm,
   KindCatalogo,
+  ConfigCatalogo,
   filtrarArticulos,
   resumenArticulos,
   unicos,
@@ -32,6 +34,25 @@ function hoyIso() {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const dia = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${m}-${dia}`;
+}
+
+function fechaArchivo() {
+  const iso = hoyIso();
+  return `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}`;
+}
+
+function encabezadosCatalogo(cfg: ConfigCatalogo) {
+  const columnas = ["Código", cfg.etiquetaItem, "Categoría", "Gestión", "Medida"];
+  if (cfg.etiquetaExtra) columnas.push(cfg.etiquetaExtra);
+  columnas.push("Estado", "Stock");
+  return columnas;
+}
+
+function filaCatalogoInforme(cfg: ConfigCatalogo, item: ArticuloVista): (string | number | null)[] {
+  const fila: (string | number | null)[] = [item.codigo, item.nombre, item.categoria, item.gestion, item.medida];
+  if (cfg.etiquetaExtra) fila.push(item.extra);
+  fila.push(item.estado_etiqueta, item.stock);
+  return fila;
 }
 
 function nroStock(valor: number) {
@@ -99,6 +120,7 @@ export function CatalogoClient({
   const [idEdicion, setIdEdicion] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [exportar, setExportar] = useState(false);
 
   const categorias = useMemo(() => unicos(articulos, "categoria"), [articulos]);
   const gestiones = useMemo(() => unicos(articulos, "gestion"), [articulos]);
@@ -222,13 +244,35 @@ export function CatalogoClient({
           <h1 className="g-page-title">{cfg.titulo}</h1>
           <p className="g-page-subtitle">{cfg.subtitulo}</p>
         </div>
-        {puedeEditar ? (
-          <button type="button" className="g-btn g-btn-primary" onClick={abrirNuevo}>
-            <IconPlus className="h-4 w-4" />
-            {nuevo}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="g-btn g-btn-icon h-9 w-9"
+            title="Exportar"
+            aria-label="Exportar"
+            onClick={() => setExportar(true)}
+          >
+            <IconDownload className="h-4 w-4" />
           </button>
-        ) : null}
+          {puedeEditar ? (
+            <button type="button" className="g-btn g-btn-primary" onClick={abrirNuevo}>
+              <IconPlus className="h-4 w-4" />
+              {nuevo}
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {exportar ? (
+        <DialogoInforme
+          titulo={`Stock de ${cfg.titulo.toLowerCase()}`}
+          nombreInicial={`Stock ${cfg.titulo.toLowerCase()} ${fechaArchivo()}`}
+          hoja="Stock"
+          encabezados={encabezadosCatalogo(cfg)}
+          filas={filtrados.map((item) => filaCatalogoInforme(cfg, item))}
+          onCerrar={() => setExportar(false)}
+        />
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi titulo="Total" valor={String(resumen.total)} pie="Registrados" />

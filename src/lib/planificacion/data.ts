@@ -23,7 +23,7 @@ export async function cargarPlanificacion(mesParam?: string, opsParam?: string):
   const mes = mesValido(mesParam);
   const ops = idEntero(opsParam);
   try {
-    const [mensual, rendimientos, paradas, horarios, capacidades, produccion, productos, solicitudes] =
+    const [mensual, rendimientos, paradas, horarios, capacidades, produccion, productos, solicitudes, paradasNo, causas] =
       await Promise.all([
         leer("planificacion_mensual"),
         leer("planificacion_rendimientos"),
@@ -33,9 +33,22 @@ export async function cargarPlanificacion(mesParam?: string, opsParam?: string):
         leer("produccion"),
         leer("catalogo_productos"),
         leer("solicitudes"),
+        leer("paradas_no_programadas"),
+        leer("causas_paradas"),
       ]);
     return armarPlan(
-      { mensual, rendimientos, paradas, horarios, capacidades, produccion, productos, solicitudes },
+      {
+        mensual,
+        rendimientos,
+        paradas,
+        horarios,
+        capacidades,
+        produccion,
+        productos,
+        solicitudes,
+        paradasNo,
+        causas,
+      },
       mes,
       ops && ops > 0 ? ops : null,
     );

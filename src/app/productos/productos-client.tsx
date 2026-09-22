@@ -2,7 +2,8 @@
 
 import { FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { IconPlus, IconSearch } from "@/components/ui/icons";
+import { IconDownload, IconPlus, IconSearch } from "@/components/ui/icons";
+import { DialogoInforme } from "@/components/ui/informe";
 import { ColumnPicker } from "@/components/ui/column-picker";
 import {
   RecordDetailDrawer,
@@ -39,6 +40,26 @@ function nro(valor: number) {
   const n = Number(valor) || 0;
   if (Math.abs(n - Math.round(n)) < 0.05) return Math.round(n).toLocaleString("es-AR");
   return n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+function fechaArchivo() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+}
+
+function filasProductoInforme(productos: ProductoVista[]): (string | number | null)[][] {
+  const filas: (string | number | null)[][] = [];
+  for (const item of productos) {
+    const base = [item.codigo, item.nombre, item.categoria, item.receta_plc, item.envase];
+    if (!item.lotes.length) {
+      filas.push([...base, "", item.stk_pall, item.stk_un, item.stk_kg]);
+      continue;
+    }
+    for (const lote of item.lotes) {
+      filas.push([...base, lote.lote, lote.stk_pall, lote.stk_un, lote.stk_kg]);
+    }
+  }
+  return filas;
 }
 
 function vacio(): DatosProductoForm {
@@ -99,6 +120,7 @@ export function ProductosClient({
   const [idEdicion, setIdEdicion] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [exportar, setExportar] = useState(false);
 
   const categorias = useMemo(() => unicos(productos, "categoria"), [productos]);
   const envasesFiltro = useMemo(() => unicos(productos, "envase"), [productos]);
@@ -230,13 +252,35 @@ export function ProductosClient({
             salen de la solicitud de cada lote.
           </p>
         </div>
-        {puedeEditar ? (
-          <button type="button" className="g-btn g-btn-primary" onClick={abrirNuevo}>
-            <IconPlus className="h-4 w-4" />
-            Nuevo producto
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="g-btn g-btn-icon h-9 w-9"
+            title="Exportar"
+            aria-label="Exportar"
+            onClick={() => setExportar(true)}
+          >
+            <IconDownload className="h-4 w-4" />
           </button>
-        ) : null}
+          {puedeEditar ? (
+            <button type="button" className="g-btn g-btn-primary" onClick={abrirNuevo}>
+              <IconPlus className="h-4 w-4" />
+              Nuevo producto
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {exportar ? (
+        <DialogoInforme
+          titulo="Stock de productos"
+          nombreInicial={`Stock productos ${fechaArchivo()}`}
+          hoja="Stock"
+          encabezados={["Código", "Producto", "Categoría", "Receta PLC", "Envase", "Lote", "Stk Pall.", "Stk Un.", "Stk Kg."]}
+          filas={filasProductoInforme(filtrados)}
+          onCerrar={() => setExportar(false)}
+        />
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi titulo="Total" valor={String(resumen.total)} pie="Registrados" />

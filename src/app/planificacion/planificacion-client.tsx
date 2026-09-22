@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useTransition } from "react";
+import { FormEvent, ReactNode, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   alternarContempla,
@@ -10,6 +10,9 @@ import {
   guardarDia,
   recalcularMes,
 } from "@/app/planificacion/actions";
+import { DialogoInforme } from "@/components/ui/informe";
+import { IconChart, IconDownload, IconFile, IconList } from "@/components/ui/icons";
+import { PanelHoras } from "@/app/planificacion/planificacion-informes";
 import { PanelesPlan, TipoPanel } from "@/app/planificacion/planificacion-paneles";
 import { RowDeleteButton, RowEditButton } from "@/components/ui/record-detail";
 import {
@@ -24,6 +27,40 @@ import {
   paradasDe,
 } from "@/lib/planificacion/logic";
 import { fechaVisible } from "@/lib/solicitudes/logic";
+
+function filasPlan(datos: DatosPlan): (string | number | null)[][] {
+  const filas = datos.dias.map((dia) => [
+    dia.contempla ? "Sí" : "No",
+    dia.dia_semana,
+    fechaVisible(dia.fecha),
+    dia.horas_disponibles,
+    dia.horas_paradas,
+    dia.horas_productivas,
+    dia.etiqueta_categorias,
+    dia.pallets_plan || "",
+    dia.kg_plan || "",
+    dia.pallets_reales || "",
+    dia.kg_reales || "",
+    dia.desvio_pct == null ? "" : dia.desvio_pct,
+    dia.observaciones,
+  ]);
+  filas.push([
+    "",
+    "TOTAL",
+    "",
+    datos.resumen.horas_disponibles,
+    datos.resumen.horas_paradas,
+    datos.resumen.horas_productivas,
+    "",
+    datos.resumen.pallets_plan,
+    datos.resumen.kg_plan,
+    datos.resumen.pallets_reales,
+    datos.resumen.kg_reales,
+    datos.resumen.desvio_pct == null ? "" : datos.resumen.desvio_pct,
+    "",
+  ]);
+  return filas;
+}
 
 function nro(valor: number, decimales = 0) {
   const n = Number(valor) || 0;
@@ -62,6 +99,8 @@ export function PlanificacionClient({
   const [formFecha, setFormFecha] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [exportar, setExportar] = useState(false);
+  const [panelHoras, setPanelHoras] = useState<"resumen" | "analisis" | null>(null);
   const resumen = datos.resumen;
   const completo = datos.dias.length > 0 && resumen.dias_planificados >= datos.dias.length;
   const faltantes = datos.dias.length - resumen.dias_planificados;
@@ -216,6 +255,12 @@ export function PlanificacionClient({
           >
             Hoy
           </button>
+          <button type="button" className="g-btn g-btn-icon h-9 w-9" title="Exportar Excel" aria-label="Exportar Excel" onClick={() => setExportar(true)}>
+            <IconDownload className="h-4 w-4" />
+          </button>
+          <button type="button" className="g-btn g-btn-icon h-9 w-9" title="Exportar PDF" aria-label="Exportar PDF" onClick={() => setExportar(true)}>
+            <IconFile className="h-4 w-4" />
+          </button>
           {puedeEditar ? (
             <button type="button" className="g-btn g-btn-primary" disabled={pending} onClick={accionPlan}>
               {textoBoton}
@@ -224,11 +269,33 @@ export function PlanificacionClient({
         </div>
       </div>
 
+      {exportar ? (
+        <DialogoInforme
+          titulo={`Planificación ${datos.etiqueta}`}
+          nombreInicial={`Planificacion ${datos.etiqueta}`}
+          hoja="Planificacion"
+          encabezados={["Hs", "Día", "Fecha", "Disponibles", "Paradas", "Productivas", "Producto", "Pallets plan.", "Kg plan.", "Pallets real", "Kg real", "Desvío", "Observaciones"]}
+          filas={filasPlan(datos)}
+          onCerrar={() => setExportar(false)}
+        />
+      ) : null}
+      {panelHoras ? <PanelHoras tipo={panelHoras} datos={datos} onCerrar={() => setPanelHoras(null)} /> : null}
+
       <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
         <Kpi
           titulo="Horas productivas"
           valor={`${nro(resumen.horas_productivas, 2)} hs`}
           pie={`Disp. ${nro(resumen.horas_disponibles, 2)} · Prog. ${nro(resumen.horas_paradas, 2)} · No prog. ${nro(resumen.horas_paradas_no, 2)}`}
+          acciones={
+            <>
+              <button type="button" className="g-btn g-btn-icon h-7 w-7" title="Resumen horas" aria-label="Resumen horas" onClick={() => setPanelHoras("resumen")}>
+                <IconList className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" className="g-btn g-btn-icon h-7 w-7" title="Análisis de horas" aria-label="Análisis de horas" onClick={() => setPanelHoras("analisis")}>
+                <IconChart className="h-3.5 w-3.5" />
+              </button>
+            </>
+          }
         />
         <Kpi
           titulo="Plan del mes"
@@ -650,16 +717,21 @@ function Kpi({
   pie,
   tono,
   color,
+  acciones,
 }: {
   titulo: string;
   valor: string;
   pie: string;
   tono?: "info";
   color?: string;
+  acciones?: ReactNode;
 }) {
   return (
     <div className="g-kpi">
-      <p className="g-kpi-title">{titulo}</p>
+      <div className="flex items-center justify-between gap-1">
+        <p className="g-kpi-title">{titulo}</p>
+        {acciones ? <div className="flex gap-1">{acciones}</div> : null}
+      </div>
       <p
         className="g-kpi-value"
         style={{ color: color ?? (tono === "info" ? "var(--color-info)" : "var(--color-primary)") }}

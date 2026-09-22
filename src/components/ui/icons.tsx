@@ -75,6 +75,31 @@ export function IconChart(p: IconProps) {
     </Svg>
   );
 }
+export function IconDownload(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 4v10" />
+      <path d="m8 10 4 4 4-4" />
+      <path d="M5 19h14" />
+    </Svg>
+  );
+}
+export function IconFile(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M7 3.5h7l5 5V20.5H7z" />
+      <path d="M14 3.5V9h5" />
+    </Svg>
+  );
+}
+export function IconList(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M9 7h10M9 12h10M9 17h10" />
+      <path d="M5 7h.01M5 12h.01M5 17h.01" />
+    </Svg>
+  );
+}
 export function IconFlask(p: IconProps) {
   return (
     <Svg {...p}>

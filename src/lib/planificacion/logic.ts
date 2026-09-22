@@ -150,6 +150,38 @@ export type ResumenMes = {
   cumple: boolean;
   desvio_pct: number | null;
 };
+export type ResumenHorasVista = {
+  dias: HorasRealesDia[];
+  porCategoria: { categoria: string; kg: number; hs: number }[];
+};
+
+export type HorasRealesDia = {
+  fecha: string;
+  productivas: number;
+  programadas: number;
+  noProgramadas: number;
+  kg: number;
+  categoria: string;
+  tieneRegistro: boolean;
+};
+
+export type ParteHoras = { nombre: string; horas: number; porcentaje: number };
+export type EventoParada = { fecha: string; causa: string; horas: number };
+export type AnalisisHoras = {
+  etiqueta: string;
+  periodoGantt: string;
+  meses: string[];
+  disponibles: number;
+  productivas: number;
+  paradasProgramadas: number;
+  paradasNoProgramadas: number;
+  pendientes: number;
+  composicion: ParteHoras[];
+  tipoParadas: ParteHoras[];
+  causas: ParteHoras[];
+  eventos: EventoParada[];
+};
+
 export type DatosPlan = {
   mes: string;
   etiqueta: string;
@@ -157,6 +189,8 @@ export type DatosPlan = {
   dias: DiaPlan[];
   resumen: ResumenMes;
   config: ConfigPlan;
+  resumenHoras: ResumenHorasVista;
+  analisis: AnalisisHoras;
   error: string | null;
 };
 
@@ -173,6 +207,8 @@ type CrudoPlan = {
   produccion: Record<string, unknown>[];
   productos: Record<string, unknown>[];
   solicitudes: Record<string, unknown>[];
+  paradasNo?: Record<string, unknown>[];
+  causas?: Record<string, unknown>[];
 };
 
 function r2(valor: number) {
@@ -652,6 +688,156 @@ export function resumenMes(mes: string, dias: DiaPlan[], horasParadasNo: number,
   return datos;
 }
 
+function horasRealesDelMes(crudo: CrudoPlan, mes: string, config: ConfigPlan): ResumenHorasVista {
+  const ym = mes.slice(0, 7);
+  const categorias = categoriaPorSolicitud(crudo);
+  const porDia = new Map<string, { p: number; g: number; n: number; kg: number; cats: string[] }>();
+  const porCat = new Map<string, { categoria: string; kg: number; hs: number }>();
+  for (const fila of crudo.produccion) {
+    const fecha = aFecha(fila.fecha_registro);
+    if (!fecha || fecha.slice(0, 7) !== ym) continue;
+    const dest = porDia.get(fecha) ?? { p: 0, g: 0, n: 0, kg: 0, cats: [] };
+    dest.p += numero(fila.hs_productivas);
+    dest.g += numero(fila.hs_paradas_programadas);
+    dest.n += numero(fila.hs_paradas_no_p);
+    dest.kg += numero(fila.peso_kg);
+    const normalizada = categorias.get(idEntero(fila.id_solicitud) ?? -1) ?? "";
+    if (normalizada) {
+      const nombre = nombreCategoria(normalizada, config);
+      if (!dest.cats.includes(nombre)) dest.cats.push(nombre);
+      const acum = porCat.get(normalizada) ?? { categoria: nombre, kg: 0, hs: 0 };
+      acum.kg += numero(fila.peso_kg);
+      acum.hs += numero(fila.hs_productivas);
+      porCat.set(normalizada, acum);
+    }
+    porDia.set(fecha, dest);
+  }
+  return {
+    dias: diasDelMes(mes).map((fecha) => {
+      const dia = porDia.get(fecha);
+      if (!dia) {
+        return {
+          fecha,
+          productivas: 0,
+          programadas: 0,
+          noProgramadas: 0,
+          kg: 0,
+          categoria: "",
+          tieneRegistro: false,
+        };
+      }
+      return {
+        fecha,
+        productivas: r2(dia.p),
+        programadas: r2(dia.g),
+        noProgramadas: r2(dia.n),
+        kg: r2(dia.kg),
+        categoria: dia.cats.join(" + "),
+        tieneRegistro: true,
+      };
+    }),
+    porCategoria: [...porCat.values()]
+      .filter((item) => item.kg > 0.0005 || item.hs > 0.0005)
+      .map((item) => ({ ...item, kg: r2(item.kg), hs: r2(item.hs) }))
+      .sort((a, b) => clave(a.categoria).localeCompare(clave(b.categoria))),
+  };
+}
+
+function parteHoras(nombre: string, horas: number, base: number): ParteHoras {
+  const porcentaje = base > 0.0005 ? (horas / base) * 100 : 0;
+  return { nombre, horas: r2(horas), porcentaje: r1(porcentaje) };
+}
+
+function analisisVacio(mes: string): AnalisisHoras {
+  const desde = mesDesplazado(mes, -5);
+  return {
+    etiqueta: etiquetaMes(mes),
+    periodoGantt: `${etiquetaMes(desde)} – ${etiquetaMes(mes)}`,
+    meses: Array.from({ length: 6 }, (_, i) => mesDesplazado(desde, i)),
+    disponibles: 0,
+    productivas: 0,
+    paradasProgramadas: 0,
+    paradasNoProgramadas: 0,
+    pendientes: 0,
+    composicion: [],
+    tipoParadas: [],
+    causas: [],
+    eventos: [],
+  };
+}
+
+function armarAnalisis(crudo: CrudoPlan, mes: string, disponibles: number): AnalisisHoras {
+  const base = analisisVacio(mes);
+  const ym = mes.slice(0, 7);
+  const hasta = diasDelMes(mes).at(-1) ?? mes;
+  const desde = base.meses[0];
+  let productivas = 0;
+  let programadas = 0;
+  let noProgramadas = 0;
+  const fechas = new Map<number, string>();
+  for (const fila of crudo.produccion) {
+    const fecha = aFecha(fila.fecha_registro);
+    const id = idEntero(fila.id);
+    if (id != null && fecha) fechas.set(id, fecha);
+    if (!fecha || fecha.slice(0, 7) !== ym) continue;
+    productivas += numero(fila.hs_productivas);
+    programadas += numero(fila.hs_paradas_programadas);
+    noProgramadas += numero(fila.hs_paradas_no_p);
+  }
+  productivas = r2(productivas);
+  programadas = r2(programadas);
+  noProgramadas = r2(noProgramadas);
+  const paradas = r2(programadas + noProgramadas);
+  const pendientes = r2(Math.max(0, disponibles - productivas - paradas));
+  const nombres = new Map<number, string>();
+  for (const fila of crudo.causas ?? []) {
+    const id = idEntero(fila.id);
+    const nombre = texto(fila.causa);
+    if (id != null && nombre) nombres.set(id, nombre);
+  }
+  const causasMes = new Map<string, number>();
+  const eventos: EventoParada[] = [];
+  for (const fila of crudo.paradasNo ?? []) {
+    const idProd = idEntero(fila.id_produccion);
+    const fecha = idProd != null ? fechas.get(idProd) : undefined;
+    if (!fecha || fecha < desde || fecha > hasta) continue;
+    const horas = numero(fila.tiempo_en_hs);
+    if (horas <= 0.0005) continue;
+    const idCausa = idEntero(fila.id_causas);
+    const causa = idCausa != null ? nombres.get(idCausa) ?? "—" : "—";
+    eventos.push({ fecha, causa, horas: r2(horas) });
+    if (fecha.slice(0, 7) === ym) causasMes.set(causa, (causasMes.get(causa) ?? 0) + horas);
+  }
+  const totalCausas = [...causasMes.values()].reduce((a, b) => a + b, 0);
+  const causas = [...causasMes.entries()]
+    .sort((a, b) => b[1] - a[1] || clave(a[0]).localeCompare(clave(b[0])))
+    .map(([nombre, horas]) => parteHoras(nombre, horas, totalCausas));
+  eventos.sort((a, b) => a.fecha.localeCompare(b.fecha) || clave(a.causa).localeCompare(clave(b.causa)));
+  const baseDisp = disponibles > 0.0005 ? disponibles : 1;
+  const composicion = [
+    parteHoras("Hs disponibles", disponibles, disponibles > 0 ? disponibles : 1),
+    parteHoras("Hs productivas", productivas, baseDisp),
+    parteHoras("Hs paradas", paradas, baseDisp),
+    parteHoras("Hs pendientes", pendientes, baseDisp),
+  ];
+  if (disponibles <= 0.0005) composicion[0] = { nombre: "Hs disponibles", horas: 0, porcentaje: 0 };
+  return {
+    ...base,
+    disponibles: r2(disponibles),
+    productivas,
+    paradasProgramadas: programadas,
+    paradasNoProgramadas: noProgramadas,
+    pendientes,
+    composicion,
+    tipoParadas: [
+      parteHoras("Hs paradas programadas", programadas, paradas),
+      parteHoras("Hs paradas no programadas", noProgramadas, paradas),
+    ],
+    causas,
+    eventos,
+  };
+}
+
 export function armarPlan(crudo: CrudoPlan, mes: string, operarios: number | null, hoy = hoyIso()): DatosPlan {
   const mesBase = primerDiaMes(mes);
   const config = armarConfig(crudo);
@@ -667,13 +853,16 @@ export function armarPlan(crudo: CrudoPlan, mes: string, operarios: number | nul
   const dias = diasDelMes(mesBase).map((fecha) =>
     armarDia(fecha, porFecha.get(fecha) ?? [], reales, config, elegidos),
   );
+  const resumen = resumenMes(mesBase, dias, paradasNoDelMes(crudo, mesBase), hoy);
   return {
     mes: mesBase,
     etiqueta: etiquetaMes(mesBase),
     operarios: elegidos,
     dias,
-    resumen: resumenMes(mesBase, dias, paradasNoDelMes(crudo, mesBase), hoy),
+    resumen,
     config,
+    resumenHoras: horasRealesDelMes(crudo, mesBase, config),
+    analisis: armarAnalisis(crudo, mesBase, resumen.horas_disponibles),
     error: null,
   };
 }
@@ -688,6 +877,8 @@ export function planVacio(mes: string, operarios: number | null, error: string):
     dias: [],
     resumen: resumenMes(mesBase, [], 0),
     config,
+    resumenHoras: { dias: [], porCategoria: [] },
+    analisis: analisisVacio(mesBase),
     error,
   };
 }

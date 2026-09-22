@@ -578,3 +578,98 @@ export function hoyIso() {
 export function etiquetaOpcion(codigo: string, nombre: string) {
   return codigo ? `${codigo}  —  ${nombre}` : nombre || "Sin nombre";
 }
+
+const MESES_CORTO = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+export type ParteGrafico = { nombre: string; cantidad: number; porcentaje: number; registros: number };
+
+export type ResumenGrafico = {
+  titulo: string;
+  unidad: string;
+  periodo: string;
+  totalRegistros: number;
+  totalIngresos: number;
+  totalEgresos: number;
+  totalNeto: number;
+  porTipo: ParteGrafico[];
+  porCategoria: ParteGrafico[];
+  porMes: ParteGrafico[];
+  detalle: { nombre: string; ingresos: number; egresos: number; neto: number; registros: number }[];
+};
+
+export function resumenGrafico(cfg: ConfigMovimiento, movimientos: MovimientoVista[]): ResumenGrafico {
+  const kgTipo = { ingreso: 0, egreso: 0 };
+  const nTipo = { ingreso: 0, egreso: 0 };
+  const kgCategoria = new Map<string, number>();
+  const kgMes = new Map<string, number>();
+  const etiqueta = new Map<string, string>();
+  const porNombre = new Map<string, { ingresos: number; egresos: number; registros: number }>();
+  let totalAbs = 0;
+  for (const item of movimientos) {
+    const cantidad = Math.max(0, item.cantidad);
+    if (item.tipo !== "ingreso" && item.tipo !== "egreso") continue;
+    kgTipo[item.tipo] += cantidad;
+    nTipo[item.tipo] += 1;
+    totalAbs += cantidad;
+    const categoria = item.categoria || "Sin categoría";
+    kgCategoria.set(categoria, (kgCategoria.get(categoria) ?? 0) + cantidad);
+    const fecha = item.fecha_registro?.slice(0, 10);
+    if (fecha && /^\d{4}-\d{2}/.test(fecha)) {
+      const claveMes = fecha.slice(0, 7);
+      const mes = Number(fecha.slice(5, 7));
+      etiqueta.set(claveMes, `${MESES_CORTO[mes - 1] ?? ""}-${fecha.slice(2, 4)}`);
+      kgMes.set(claveMes, (kgMes.get(claveMes) ?? 0) + cantidad);
+    }
+    const nombre = item.nombre || item.codigo || `id ${item.id}`;
+    const bucket = porNombre.get(nombre) ?? { ingresos: 0, egresos: 0, registros: 0 };
+    if (item.tipo === "ingreso") bucket.ingresos += cantidad;
+    else bucket.egresos += cantidad;
+    bucket.registros += 1;
+    porNombre.set(nombre, bucket);
+  }
+  const pct = (valor: number) => (totalAbs > 0 ? (valor / totalAbs) * 100 : 0);
+  const meses = [...kgMes.keys()].sort();
+  const articulos = [...porNombre.entries()].sort((a, b) => b[1].ingresos + b[1].egresos - (a[1].ingresos + a[1].egresos));
+  const detalle = articulos.map(([nombre, datos]) => ({
+    nombre,
+    ingresos: datos.ingresos,
+    egresos: datos.egresos,
+    neto: datos.ingresos - datos.egresos,
+    registros: datos.registros,
+  }));
+  detalle.push({
+    nombre: "TOTAL",
+    ingresos: kgTipo.ingreso,
+    egresos: kgTipo.egreso,
+    neto: kgTipo.ingreso - kgTipo.egreso,
+    registros: movimientos.length,
+  });
+  return {
+    titulo: `Movimientos de ${cfg.titulo.toLowerCase()}`,
+    unidad: cfg.unidad,
+    periodo: meses.length ? `${etiqueta.get(meses[0])} a ${etiqueta.get(meses[meses.length - 1])}` : "sin período",
+    totalRegistros: movimientos.length,
+    totalIngresos: kgTipo.ingreso,
+    totalEgresos: kgTipo.egreso,
+    totalNeto: kgTipo.ingreso - kgTipo.egreso,
+    porTipo: [
+      { nombre: "Ingreso", cantidad: kgTipo.ingreso, porcentaje: pct(kgTipo.ingreso), registros: nTipo.ingreso },
+      { nombre: "Egreso", cantidad: kgTipo.egreso, porcentaje: pct(kgTipo.egreso), registros: nTipo.egreso },
+    ],
+    porCategoria: [...kgCategoria.keys()]
+      .sort((a, b) => a.localeCompare(b, "es"))
+      .map((nombre) => ({
+        nombre,
+        cantidad: kgCategoria.get(nombre) ?? 0,
+        porcentaje: pct(kgCategoria.get(nombre) ?? 0),
+        registros: 0,
+      })),
+    porMes: meses.map((claveMes) => ({
+      nombre: etiqueta.get(claveMes) ?? claveMes,
+      cantidad: kgMes.get(claveMes) ?? 0,
+      porcentaje: pct(kgMes.get(claveMes) ?? 0),
+      registros: 0,
+    })),
+    detalle,
+  };
+}
