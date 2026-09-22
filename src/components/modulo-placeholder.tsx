@@ -16,11 +16,13 @@ export async function PlaceholderModulo({
 
   return (
     <AppShell perfil={perfil} activo={moduloId}>
-      <h1 className="text-xl font-semibold">{meta?.label ?? moduloId}</h1>
-      <p className="mt-2 text-sm text-[var(--muted-fg)]">
-        Módulo en construcción. Los permisos de tu rol ya controlan el acceso a
-        esta pantalla.
-      </p>
+      <div className="g-card max-w-xl p-4">
+        <h1 className="g-page-title">{meta?.label ?? moduloId}</h1>
+        <p className="g-page-subtitle mt-1">
+          Módulo en construcción. Los permisos de tu rol ya controlan el acceso
+          a esta pantalla.
+        </p>
+      </div>
     </AppShell>
   );
 }

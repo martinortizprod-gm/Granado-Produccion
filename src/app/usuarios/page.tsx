@@ -27,11 +27,16 @@ export default async function UsuariosPage() {
 
   return (
     <AppShell perfil={perfil} activo="usuarios">
-      <h1 className="mb-4 text-xl font-semibold">Usuarios y roles</h1>
       {errorMsg ? (
-        <p className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMsg}
-        </p>
+        <div className="space-y-4">
+          <div>
+            <h1 className="g-page-title">Usuarios y roles</h1>
+            <p className="g-page-subtitle">
+              Gestioná los usuarios del sistema y sus permisos de acceso.
+            </p>
+          </div>
+          <p className="g-alert g-alert-danger">{errorMsg}</p>
+        </div>
       ) : (
         <UsuariosClient
           roles={roles}

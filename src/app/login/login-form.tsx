@@ -11,6 +11,7 @@ export function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -39,10 +40,7 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="mt-6 space-y-4">
       <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-[#1f3d2c]"
-        >
+        <label htmlFor="email" className="g-label">
           Correo
         </label>
         <input
@@ -52,39 +50,43 @@ export function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#3D7A56] focus:ring-1 focus:ring-[#3D7A56]"
+          className="g-input"
           placeholder="usuario@empresa.com"
         />
       </div>
 
       <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-[#1f3d2c]"
-        >
+        <label htmlFor="password" className="g-label">
           Contraseña
         </label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#3D7A56] focus:ring-1 focus:ring-[#3D7A56]"
-        />
+        <div className="relative">
+          <input
+            id="password"
+            type={showPass ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="g-input pr-16"
+            placeholder="Ingresá tu contraseña"
+          />
+          <button
+            type="button"
+            className="absolute top-1/2 right-2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            onClick={() => setShowPass((v) => !v)}
+            tabIndex={-1}
+          >
+            {showPass ? "Ocultar" : "Ver"}
+          </button>
+        </div>
       </div>
 
-      {error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className="g-alert g-alert-danger">{error}</p> : null}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-md bg-[#3D7A56] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#326448] disabled:opacity-60"
+        className="g-btn g-btn-primary w-full"
       >
         {loading ? "Ingresando…" : "Ingresar"}
       </button>

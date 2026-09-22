@@ -2,6 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { getPerfilSesion, puede } from "@/lib/auth/permisos";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { ProductosTabla } from "@/app/productos/productos-tabla";
 
 export const dynamic = "force-dynamic";
 
@@ -34,43 +35,28 @@ export default async function ProductosPage() {
 
   return (
     <AppShell perfil={perfil} activo="productos">
-      <h1 className="mb-4 text-xl font-semibold">Productos</h1>
-      {!puede(perfil, "productos", "leer") ? (
-        <p className="text-sm text-[var(--muted-fg)]">
-          No tenés permiso de lectura en este módulo.
-        </p>
-      ) : error ? (
-        <p className="rounded-md border border-red-300 px-4 py-3 text-sm text-[var(--danger)]">
-          {error}
-        </p>
-      ) : productos.length === 0 ? (
-        <p className="text-sm text-[var(--muted-fg)]">Sin productos.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--card)]">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-[var(--granado)] text-white">
-              <tr>
-                <th className="px-4 py-3 font-medium">ID</th>
-                <th className="px-4 py-3 font-medium">Código</th>
-                <th className="px-4 py-3 font-medium">Producto</th>
-                <th className="px-4 py-3 font-medium">Categoría</th>
-                <th className="px-4 py-3 font-medium">Medida</th>
-              </tr>
-            </thead>
-            <tbody>
-              {productos.map((p) => (
-                <tr key={p.id} className="border-t border-[var(--border)]">
-                  <td className="px-4 py-2">{p.id}</td>
-                  <td className="px-4 py-2">{p.codigo ?? "—"}</td>
-                  <td className="px-4 py-2">{p.producto ?? "—"}</td>
-                  <td className="px-4 py-2">{p.categoria ?? "—"}</td>
-                  <td className="px-4 py-2">{p.medida ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="g-stack">
+        <div>
+          <h1 className="g-page-title">Productos</h1>
+          <p className="g-page-subtitle">
+            Catálogo de productos del sistema.
+          </p>
         </div>
-      )}
+
+        {!puede(perfil, "productos", "leer") ? (
+          <p className="text-[13px] text-[var(--color-text-muted)]">
+            No tenés permiso de lectura en este módulo.
+          </p>
+        ) : error ? (
+          <p className="g-alert g-alert-danger">{error}</p>
+        ) : productos.length === 0 ? (
+          <div className="g-card p-4 text-[13px] text-[var(--color-text-muted)]">
+            Sin productos.
+          </div>
+        ) : (
+          <ProductosTabla productos={productos} />
+        )}
+      </div>
     </AppShell>
   );
 }

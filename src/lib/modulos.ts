@@ -17,6 +17,45 @@ export const MODULOS = [
 
 export type ModuloId = (typeof MODULOS)[number]["id"];
 
+/** Agrupación solo visual del menú (no cambia rutas ni permisos). */
+export const GRUPOS_NAV: { id: string; label: string; modulos: ModuloId[] }[] =
+  [
+    {
+      id: "operacion",
+      label: "Operación",
+      modulos: [
+        "inicio",
+        "solicitudes",
+        "produccion",
+        "movimientos",
+        "planificacion",
+        "informes",
+      ],
+    },
+    {
+      id: "maestros",
+      label: "Maestros",
+      modulos: [
+        "ingredientes",
+        "insumos",
+        "envases",
+        "etiquetas",
+        "productos",
+        "recetas",
+      ],
+    },
+    {
+      id: "analisis",
+      label: "Análisis",
+      modulos: ["analytics"],
+    },
+    {
+      id: "sistema",
+      label: "Sistema",
+      modulos: ["usuarios"],
+    },
+  ];
+
 export type AccionPermiso = "ver" | "leer" | "editar";
 
 export type PermisoModulo = {
