@@ -54,9 +54,18 @@ def cargar_env(ruta: Path) -> dict[str, str]:
     return out
 
 
-def sql_valor(v):
+# Columnas que en SQLite mezclan códigos/texto con números → siempre string.
+FORCE_TEXT_COLUMNS = {
+    ("movimientos_insumos", "id_insumo"),
+    ("catalogo_insumos", "consumo_aprox"),
+}
+
+
+def sql_valor(v, *, as_text: bool = False):
     if v is None:
         return None
+    if as_text:
+        return str(v)
     if isinstance(v, (bytes, bytearray)):
         return v.decode("utf-8", errors="replace")
     if isinstance(v, bool):
@@ -72,10 +81,12 @@ def leer_tabla(conn: sqlite3.Connection, nombre: str) -> tuple[list[str], list[d
     cols_ok = [c for c in cols if c not in omit]
     filas = []
     for row in conn.execute(f'SELECT * FROM "{nombre}"'):
-        reg = {cols[i]: sql_valor(row[i]) for i in range(len(cols))}
-        for c in omit:
-            reg.pop(c, None)
-        # Solo columnas permitidas
+        reg = {}
+        for i, col in enumerate(cols):
+            if col in omit:
+                continue
+            force_text = (nombre, col) in FORCE_TEXT_COLUMNS
+            reg[col] = sql_valor(row[i], as_text=force_text)
         filas.append({c: reg.get(c) for c in cols_ok})
     return cols_ok, filas
 

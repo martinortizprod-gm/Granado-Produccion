@@ -115,7 +115,7 @@ create table public.catalogo_insumos (
   codigo text,
   insumo text,
   gestion text,
-  consumo_aprox numeric,
+  consumo_aprox text,
   medida text,
   estado text,
   categoria text
@@ -200,7 +200,7 @@ create table public.movimientos_insumos (
   tipo text,
   fecha_registro text,
   fecha_vencimiento text,
-  id_insumo numeric,
+  id_insumo text,
   insumo text,
   categoria text,
   lote text,

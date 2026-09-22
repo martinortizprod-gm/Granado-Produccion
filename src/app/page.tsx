@@ -84,7 +84,7 @@ export default async function HomePage() {
             <code className="rounded bg-slate-100 px-1">
               supabase/politica_lectura_anon_dev.sql
             </code>
-            . Las tablas siguen vacías hasta migrar datos desde SQLite.
+            .
           </p>
         </section>
       </main>
