@@ -4,6 +4,24 @@
   --background: #f4f7f5;
   --foreground: #1f3d2c;
   --granado: #3d7a56;
+  --card: #ffffff;
+  --border: color-mix(in srgb, #3d7a56 20%, transparent);
+  --muted: #e8eee9;
+  --muted-fg: #64748b;
+  --sidebar: #ffffff;
+  --danger: #b91c1c;
+}
+
+html.oscuro {
+  --background: #0f1712;
+  --foreground: #e7efe9;
+  --granado: #4f9a6c;
+  --card: #162019;
+  --border: color-mix(in srgb, #4f9a6c 28%, transparent);
+  --muted: #1c2a21;
+  --muted-fg: #94a3b8;
+  --sidebar: #121a15;
+  --danger: #f87171;
 }
 
 @theme inline {
