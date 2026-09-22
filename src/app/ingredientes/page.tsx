@@ -1,5 +1,7 @@
-import { PlaceholderModulo } from "@/components/modulo-placeholder";
+import { PaginaCatalogo } from "@/app/catalogo/pagina";
+
 export const dynamic = "force-dynamic";
+
 export default function Page() {
-  return <PlaceholderModulo moduloId="ingredientes" />;
+  return <PaginaCatalogo kind="ingredientes" />;
 }

@@ -16,7 +16,12 @@ import {
 import { eliminarSolicitud } from "@/app/solicitudes/actions";
 import { IconPlus } from "@/components/ui/icons";
 import { ColumnPicker } from "@/components/ui/column-picker";
-import { RecordDetailDrawer, RowDetailButton } from "@/components/ui/record-detail";
+import {
+  RecordDetailDrawer,
+  RowDeleteButton,
+  RowDetailButton,
+  RowEditButton,
+} from "@/components/ui/record-detail";
 import { useColumnVisibility } from "@/components/ui/use-column-visibility";
 
 type Props = {
@@ -152,8 +157,8 @@ export function SolicitudesClient({
       </div>
 
       <div className="g-card px-3 py-2.5">
-        <div className="flex flex-wrap items-end gap-x-2.5 gap-y-2">
-          <label className="w-[128px]">
+        <div className="g-filters">
+          <label>
             <span className="g-label">Estado</span>
             <select
               className="g-input"
@@ -166,7 +171,7 @@ export function SolicitudesClient({
               <option>Completadas</option>
             </select>
           </label>
-          <label className="min-w-[140px] flex-1 basis-[140px]">
+          <label>
             <span className="g-label">Producto</span>
             <select
               className="g-input"
@@ -178,7 +183,7 @@ export function SolicitudesClient({
               ))}
             </select>
           </label>
-          <label className="w-[132px]">
+          <label>
             <span className="g-label">Desde</span>
             <input
               type="date"
@@ -187,7 +192,7 @@ export function SolicitudesClient({
               onChange={(e) => setFechaDesde(e.target.value)}
             />
           </label>
-          <label className="w-[132px]">
+          <label>
             <span className="g-label">Hasta</span>
             <input
               type="date"
@@ -196,7 +201,7 @@ export function SolicitudesClient({
               onChange={(e) => setFechaHasta(e.target.value)}
             />
           </label>
-          <label className="min-w-[160px] flex-[1.4] basis-[160px]">
+          <label>
             <span className="g-label">Buscar</span>
             <input
               className="g-input"
@@ -205,7 +210,7 @@ export function SolicitudesClient({
               onChange={(e) => setBusqueda(e.target.value)}
             />
           </label>
-          <label className="mb-[7px] flex h-[var(--control-height)] items-center gap-2 text-[13px] text-[var(--color-text-secondary)]">
+          <label className="g-filters-fit flex h-[var(--control-height)] items-center gap-2 text-[13px] text-[var(--color-text-secondary)]">
             <input
               type="checkbox"
               checked={soloPendientes}
@@ -347,20 +352,11 @@ export function SolicitudesClient({
                           />
                           {puedeEditar ? (
                             <>
-                              <Link
-                                href={`/solicitudes/${s.id}/editar`}
-                                className="text-[12.5px] font-medium text-[var(--color-info)] hover:underline"
-                              >
-                                Editar
-                              </Link>
-                              <button
-                                type="button"
+                              <RowEditButton href={`/solicitudes/${s.id}/editar`} />
+                              <RowDeleteButton
                                 disabled={pending}
-                                className="text-[12.5px] font-medium text-[var(--color-danger)] hover:underline disabled:opacity-50"
                                 onClick={() => onEliminar(s)}
-                              >
-                                Eliminar
-                              </button>
+                              />
                             </>
                           ) : null}
                         </div>

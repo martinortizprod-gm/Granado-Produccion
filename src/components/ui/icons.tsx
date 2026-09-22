@@ -217,6 +217,24 @@ export function IconEye(p: IconProps) {
     </Svg>
   );
 }
+export function IconPencil(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M13.5 6.5l4 4" />
+      <path d="M4.5 19.5l1-4L15 6a1.8 1.8 0 0 1 2.5 2.5L8 18l-4 1.5z" />
+    </Svg>
+  );
+}
+export function IconTrash(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M5 7h14" />
+      <path d="M9 7V5h6v2" />
+      <path d="M8 7l.8 12h6.4L16 7" />
+      <path d="M10 11v5M14 11v5" />
+    </Svg>
+  );
+}
 
 const MAP: Record<ModuloId, (p: IconProps) => ReactNode> = {
   inicio: IconHome,

@@ -16,7 +16,9 @@ import { ColumnPicker } from "@/components/ui/column-picker";
 import {
   DetalleFilas,
   RecordDetailDrawer,
+  RowDeleteButton,
   RowDetailButton,
+  RowEditButton,
 } from "@/components/ui/record-detail";
 import { useColumnVisibility } from "@/components/ui/use-column-visibility";
 
@@ -483,13 +485,7 @@ export function UsuariosClient({ roles, usuarios, puedeEditar }: Props) {
                           <div className="flex items-center gap-1.5">
                             <RowDetailButton onClick={() => setDetalleId(u.id)} />
                             {puedeEditar ? (
-                              <button
-                                type="button"
-                                className="text-[12.5px] font-medium text-[var(--color-info)] hover:underline"
-                                onClick={() => editarUsuario(u)}
-                              >
-                                Editar
-                              </button>
+                              <RowEditButton onClick={() => editarUsuario(u)} />
                             ) : null}
                           </div>
                         </td>
@@ -682,13 +678,7 @@ export function UsuariosClient({ roles, usuarios, puedeEditar }: Props) {
                       Abrir
                     </button>
                     {puedeEditar && !r.es_sistema ? (
-                      <button
-                        type="button"
-                        className="text-[12.5px] font-medium text-[var(--color-danger)] hover:underline"
-                        onClick={() => onBorrarRol(r.id)}
-                      >
-                        Borrar
-                      </button>
+                      <RowDeleteButton onClick={() => onBorrarRol(r.id)} />
                     ) : null}
                   </div>
                 </li>

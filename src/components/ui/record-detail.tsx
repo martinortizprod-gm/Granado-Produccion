@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { IconClose, IconEye } from "@/components/ui/icons";
+import Link from "next/link";
+import { IconClose, IconEye, IconPencil, IconTrash } from "@/components/ui/icons";
 
 export function RowDetailButton({
   onClick,
@@ -20,6 +21,61 @@ export function RowDetailButton({
       }}
     >
       <IconEye className="h-4 w-4" />
+    </button>
+  );
+}
+
+export function RowEditButton({
+  onClick,
+  href,
+}: {
+  onClick?: () => void;
+  href?: string;
+}) {
+  const className = "g-btn g-btn-icon g-btn-icon-edit h-7 w-7";
+  if (href) {
+    return (
+      <Link href={href} className={className} title="Editar" aria-label="Editar">
+        <IconPencil className="h-4 w-4" />
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={className}
+      title="Editar"
+      aria-label="Editar"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+    >
+      <IconPencil className="h-4 w-4" />
+    </button>
+  );
+}
+
+export function RowDeleteButton({
+  onClick,
+  disabled,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className="g-btn g-btn-icon g-btn-icon-danger h-7 w-7"
+      title="Eliminar"
+      aria-label="Eliminar"
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      <IconTrash className="h-4 w-4" />
     </button>
   );
 }
