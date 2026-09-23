@@ -32,6 +32,7 @@ export function DialogoInforme({
   hoja,
   encabezados,
   filas,
+  filasPdf,
   onCerrar,
 }: {
   titulo: string;
@@ -39,6 +40,7 @@ export function DialogoInforme({
   hoja: string;
   encabezados: string[];
   filas: (string | number | null)[][];
+  filasPdf?: (string | number | null)[][];
   onCerrar: () => void;
 }) {
   const [nombre, setNombre] = useState(nombreInicial);
@@ -47,7 +49,7 @@ export function DialogoInforme({
     e?.preventDefault();
     const elegido = nombre.trim() || nombreInicial;
     if (formato === "excel") descargarExcel(elegido, hoja, encabezados, filas);
-    else descargarPdf(elegido, titulo, encabezados, filas);
+    else descargarPdf(elegido, titulo, encabezados, filasPdf ?? filas);
     onCerrar();
   }
 
