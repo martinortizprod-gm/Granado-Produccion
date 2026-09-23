@@ -105,6 +105,7 @@ export function FormularioAjuste({
     ),
   );
   const [cantidad, setCantidad] = useState("");
+  const [otroLote, setOtroLote] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const totalRef = useRef<HTMLInputElement>(null);
 
@@ -185,8 +186,12 @@ export function FormularioAjuste({
 
   function cambiarTipo(siguiente: string) {
     setTipo(siguiente);
+    setOtroLote(false);
     setLote((actual) => elegirLote(siguiente, articulo.lotes, actual));
   }
+
+  const loteEnLista = visibles.some((l) => clave(l.lote) === clave(lote));
+  const valorSelect = otroLote ? "__nuevo__" : loteEnLista ? lote : "";
 
   function onGuardar(e: FormEvent) {
     e.preventDefault();
@@ -252,21 +257,39 @@ export function FormularioAjuste({
 
         <label className="block">
           <span className="g-label">Lote</span>
-          <input
+          <select
             className="g-input"
-            list={`ajuste-lotes-${kind}-${articulo.id}`}
-            value={lote}
-            onChange={(e) => setLote(e.target.value)}
-            autoComplete="off"
-          />
-          <datalist id={`ajuste-lotes-${kind}-${articulo.id}`}>
+            value={valorSelect}
+            onChange={(e) => {
+              if (e.target.value === "__nuevo__") {
+                setOtroLote(true);
+                setLote("");
+                return;
+              }
+              setOtroLote(false);
+              setLote(e.target.value);
+            }}
+          >
+            <option value="">{esEgreso(tipo) ? "Seleccioná un lote" : "Elegí un lote"}</option>
             {visibles.map((l) => (
               <option key={l.lote} value={l.lote}>
-                {`${nro(l.stock)} ${unidad}`}
+                {`${l.lote}  —  ${nro(l.stock)} ${unidad}`}
               </option>
             ))}
-          </datalist>
+            {esEgreso(tipo) ? null : <option value="__nuevo__">Otro lote…</option>}
+          </select>
         </label>
+        {otroLote ? (
+          <label className="block">
+            <span className="g-label">Lote nuevo</span>
+            <input
+              className="g-input"
+              value={lote}
+              onChange={(e) => setLote(e.target.value)}
+              autoComplete="off"
+            />
+          </label>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-2">
           <p className="col-span-2 text-[13px]">
