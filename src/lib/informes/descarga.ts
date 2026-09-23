@@ -1,4 +1,4 @@
-/** Descarga de informes sin dependencias nuevas. Excel abre el XML; el PDF es una tabla. */
+import { lineaEmision } from "@/lib/informes/emision";
 
 function xml(valor: string) {
   return valor.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -16,6 +16,31 @@ function bajar(nombre: string, blob: Blob) {
   enlace.download = nombre;
   enlace.click();
   URL.revokeObjectURL(url);
+}
+
+async function guardarConDialogo(nombre: string, blob: Blob) {
+  const elegir = (window as Window & {
+    showSaveFilePicker?: (opciones: {
+      suggestedName: string;
+      types: { description: string; accept: Record<string, string[]> }[];
+    }) => Promise<{ createWritable: () => Promise<{ write: (dato: Blob) => Promise<void>; close: () => Promise<void> }> }>;
+  }).showSaveFilePicker;
+  if (!elegir) {
+    bajar(nombre, blob);
+    return;
+  }
+  try {
+    const destino = await elegir({
+      suggestedName: nombre,
+      types: [{ description: "PDF", accept: { "application/pdf": [".pdf"] } }],
+    });
+    const archivo = await destino.createWritable();
+    await archivo.write(blob);
+    await archivo.close();
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") return;
+    bajar(nombre, blob);
+  }
 }
 
 export function descargarExcel(
@@ -44,7 +69,7 @@ export function descargarExcel(
 const WIN: Record<string, number> = {
   á: 0xe1, é: 0xe9, í: 0xed, ó: 0xf3, ú: 0xfa, ñ: 0xf1, ü: 0xfc,
   Á: 0xc1, É: 0xc9, Í: 0xcd, Ó: 0xd3, Ú: 0xda, Ñ: 0xd1, Ü: 0xdc,
-  "°": 0xb0, "–": 0x96, "—": 0x97,
+  "°": 0xb0, "·": 0xb7, "–": 0x96, "—": 0x97,
 };
 
 function bytesTexto(valor: string) {
@@ -58,7 +83,7 @@ function bytesTexto(valor: string) {
   return out;
 }
 
-function escaparPdf(valor: string) {
+export function escaparPdf(valor: string) {
   const bytes = bytesTexto(valor);
   const out: number[] = [];
   for (const b of bytes) {
@@ -87,7 +112,7 @@ export function descargarPdf(
   const anchoUtil = ancho - margen * 2;
   const col = anchoUtil / Math.max(1, encabezados.length);
   const maxChars = Math.max(4, Math.floor(col / (tam * 0.48)));
-  const filasPorPagina = Math.floor((alto - 70) / altoFila);
+  const filasPorPagina = Math.floor((alto - 86) / altoFila);
 
   const paginas: number[][] = [];
   const bloques = filas.length ? filas : [];
@@ -104,7 +129,8 @@ export function descargarPdf(
       for (let i = 0; i < fin.length; i += 1) ops.push(fin.charCodeAt(i));
     };
     poner(margen, alto - 36, 12, titulo, true);
-    let y = alto - 58;
+    poner(margen, alto - 50, 8, lineaEmision());
+    let y = alto - 68;
     encabezados.forEach((enc, i) => poner(margen + i * col, y, tam, enc, true));
     y -= altoFila;
     for (const fila of trozo) {
@@ -113,7 +139,10 @@ export function descargarPdf(
     }
     paginas.push(ops);
   }
+  publicarPdf(nombre, ancho, alto, paginas);
+}
 
+export function publicarPdf(nombre: string, ancho: number, alto: number, paginas: number[][], elegirCarpeta = false) {
   const buf: number[] = [];
   const add = (s: string) => {
     for (let i = 0; i < s.length; i += 1) buf.push(s.charCodeAt(i));
@@ -140,7 +169,7 @@ export function descargarPdf(
     const idContenido = primerContenido + i;
     obj(
       idPagina,
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ancho} ${alto}] /Contents ${idContenido} 0 R /Resources << /Font << /F1 ${idFont} 0 R /F2 ${idFontB} 0 R >> >> >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ancho} ${alto}] /Contents ${idContenido} 0 R /Resources << /Font << /F1 ${idFont} 0 R /F2 ${idFontB} 0 R /F3 ${idFontB + 1} 0 R >> >> >>`,
     );
     const stream = [`${idContenido} 0 obj\n<< /Length ${ops.length} >>\nstream\n`];
     offsets[idContenido] = buf.length;
@@ -150,13 +179,18 @@ export function descargarPdf(
   });
   obj(idFont, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
   obj(idFontB, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+  const idFontI = idFontB + 1;
+  obj(idFontI, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>");
   const xref = buf.length;
-  add(`xref\n0 ${idFontB + 1}\n`);
+  add(`xref\n0 ${idFontI + 1}\n`);
   add("0000000000 65535 f \n");
-  for (let i = 1; i <= idFontB; i += 1) {
+  for (let i = 1; i <= idFontI; i += 1) {
     const off = offsets[i] ?? 0;
     add(`${String(off).padStart(10, "0")} 00000 n \n`);
   }
-  add(`trailer\n<< /Size ${idFontB + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
-  bajar(nombreArchivo(nombre, "pdf"), new Blob([new Uint8Array(buf)], { type: "application/pdf" }));
+  add(`trailer\n<< /Size ${idFontI + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  const archivo = nombreArchivo(nombre, "pdf");
+  const blob = new Blob([new Uint8Array(buf)], { type: "application/pdf" });
+  if (elegirCarpeta) void guardarConDialogo(archivo, blob);
+  else bajar(archivo, blob);
 }

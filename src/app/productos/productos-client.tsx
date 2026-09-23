@@ -282,7 +282,7 @@ export function ProductosClient({
         />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="g-kpis grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi titulo="Total" valor={String(resumen.total)} pie="Registrados" />
         <Kpi titulo="Con código" valor={String(resumen.con_codigo)} pie="Código asignado" />
         <Kpi titulo="Sin código" valor={String(resumen.sin_codigo)} pie="Pendiente de código" tono="warning" />

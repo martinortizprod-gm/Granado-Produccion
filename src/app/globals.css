@@ -26,10 +26,12 @@
   /* Surfaces */
   --color-background: #f4f7f5;
   --color-surface: #ffffff;
+  --color-highlight: #c5e4d4;
   --color-surface-secondary: #eef3f0;
-  --color-border: #d7e2db;
-  --color-border-strong: #b8c9bf;
+  --color-border: #8fa89c;
+  --color-border-strong: #6d8b7c;
   --color-table-header: #c5d4cb;
+  --color-table-total: #8fa898;
 
   /* Text */
   --color-text: #14281e;
@@ -94,10 +96,12 @@
 html.oscuro {
   --color-background: #0c1410;
   --color-surface: #152019;
+  --color-highlight: #1e4a34;
   --color-surface-secondary: #1c2a22;
-  --color-border: #2a3d32;
-  --color-border-strong: #3a5244;
+  --color-border: #4a6758;
+  --color-border-strong: #628676;
   --color-table-header: #24362c;
+  --color-table-total: #15241c;
   --color-text: #e8f0eb;
   --color-text-secondary: #b7c8bd;
   --color-text-muted: #87998e;
@@ -406,6 +410,13 @@ body {
 .g-table tbody tr.g-row-active td:first-child {
   box-shadow: inset 3px 0 0 var(--color-primary-muted);
 }
+.g-table tbody tr.g-row-total td {
+  background: var(--color-table-total);
+  font-weight: 600;
+}
+.g-table tbody tr.g-row-total:hover td {
+  background: var(--color-table-total);
+}
 
 .g-page-title {
   font-size: var(--text-page);
@@ -432,6 +443,13 @@ body {
   gap: var(--section-gap);
 }
 
+.g-nav-scroll {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.g-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
 .g-nav-link {
   transition: background var(--transition), color var(--transition);
 }
@@ -439,14 +457,47 @@ body {
   background: var(--color-sidebar-hover) !important;
 }
 
+.g-kpis {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--color-background);
+  margin-left: calc(var(--page-pad-x) * -1);
+  margin-right: calc(var(--page-pad-x) * -1);
+  padding: 0.15rem var(--page-pad-x) 0.65rem;
+}
 .g-kpi {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: 14px;
   box-shadow: var(--shadow-sm);
-  padding: 0.65rem 0.85rem;
+  padding: 0.75rem 0.9rem;
   min-height: 0;
 }
+.g-kpi-rich {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.g-kpi-mint { background: #e7f6ee; border-color: #b7dfc8; }
+.g-kpi-blue { background: #e7f1fb; border-color: #c5d8f2; }
+.g-kpi-violet { background: #f3eefb; border-color: #ddd0f2; }
+.g-kpi-sage { background: #e5f4ec; border-color: #b9deca; }
+.g-kpi-badge {
+  display: flex;
+  height: 38px;
+  width: 38px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #fff;
+}
+html.oscuro .g-kpi-mint,
+html.oscuro .g-kpi-sage { background: #163526; border-color: #2f6a48; }
+html.oscuro .g-kpi-blue { background: #15283a; border-color: #2d5278; }
+html.oscuro .g-kpi-violet { background: #2a2238; border-color: #5a4578; }
+html.oscuro .g-kpi-badge { background: rgba(255, 255, 255, 0.08); }
 .g-kpi-title {
   font-size: var(--text-caption);
   font-weight: 600;
@@ -456,7 +507,7 @@ body {
 }
 .g-kpi-value {
   margin-top: 0.15rem;
-  font-size: 1.35rem;
+  font-size: 1.65rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -495,4 +546,35 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
+}
+
+/* Dashboard de inicio. No cambia tarjetas ni tablas del resto del sistema. */
+.g-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+}
+.g-dash-card {
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.g-dash-welcome {
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--color-highlight) 65%, transparent), transparent 48%),
+    linear-gradient(100deg, var(--color-primary-light), var(--color-surface) 62%);
+}
+.g-dash-alert {
+  background: var(--color-warning-bg);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 28%, transparent);
+  border-radius: 14px;
+}
+.g-dash-table thead th {
+  background: var(--color-surface-secondary);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.75rem;
 }

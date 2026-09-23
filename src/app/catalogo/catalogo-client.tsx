@@ -274,7 +274,7 @@ export function CatalogoClient({
         />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="g-kpis grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi titulo="Total" valor={String(resumen.total)} pie="Registrados" />
         <Kpi titulo="Activos" valor={String(resumen.activos)} pie="Disponibles para usar" />
         <Kpi titulo="Inactivos" valor={String(resumen.inactivos)} pie="Fuera de uso" tono="muted" />

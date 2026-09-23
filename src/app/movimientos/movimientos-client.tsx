@@ -279,7 +279,7 @@ export function MovimientosClient({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="g-kpis grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi titulo="Total" valor={String(resumen.total)} pie="Registros" />
         <Kpi
           titulo="Ingresos"

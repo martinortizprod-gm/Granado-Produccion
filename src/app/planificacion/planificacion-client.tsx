@@ -281,7 +281,7 @@ export function PlanificacionClient({
       ) : null}
       {panelHoras ? <PanelHoras tipo={panelHoras} datos={datos} onCerrar={() => setPanelHoras(null)} /> : null}
 
-      <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+      <div className="g-kpis grid grid-cols-2 gap-2 xl:grid-cols-4">
         <Kpi
           titulo="Horas productivas"
           valor={`${nro(resumen.horas_productivas, 2)} hs`}

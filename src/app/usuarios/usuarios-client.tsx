@@ -160,6 +160,13 @@ export function UsuariosClient({ roles, usuarios, puedeEditar }: Props) {
           };
         }
       }
+      if (rol.nombre === "Administrador") {
+        for (const p of base) {
+          p.puede_ver = true;
+          p.puede_leer = true;
+          p.puede_editar = true;
+        }
+      }
       setPermisos(base);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar permisos");

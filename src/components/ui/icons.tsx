@@ -75,6 +75,16 @@ export function IconChart(p: IconProps) {
     </Svg>
   );
 }
+export function IconCalculator(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M8 7h8" />
+      <path d="M8 12h.01M12 12h.01M16 12h.01" />
+      <path d="M8 16h.01M12 16h.01M16 16h.01" />
+    </Svg>
+  );
+}
 export function IconDownload(p: IconProps) {
   return (
     <Svg {...p}>
@@ -181,6 +191,30 @@ export function IconLogout(p: IconProps) {
     </Svg>
   );
 }
+export function IconUserPlus(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3 19c0-3 2.7-5 6-5" />
+      <path d="M17 11v6M14 14h6" />
+    </Svg>
+  );
+}
+export function IconCheck(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M8.5 12.2 11 14.5 15.5 9.5" />
+    </Svg>
+  );
+}
+export function IconChevron(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M9 6l6 6-6 6" />
+    </Svg>
+  );
+}
 export function IconPlus(p: IconProps) {
   return (
     <Svg {...p}>
@@ -250,6 +284,34 @@ export function IconPencil(p: IconProps) {
     </Svg>
   );
 }
+export function IconDatabase(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <ellipse cx="12" cy="6.5" rx="7" ry="3" />
+      <path d="M5 6.5v11c0 1.7 3.1 3 7 3s7-1.3 7-3v-11" />
+      <path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3" />
+    </Svg>
+  );
+}
+export function IconBolt(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M13 2.5 5.5 13H12l-1 8.5L18.5 11H12l1-8.5z" />
+    </Svg>
+  );
+}
+export function IconWeight(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 3.5v3" />
+      <path d="M7 6.5h10" />
+      <path d="M6.5 10.5 5 15a3.2 3.2 0 0 0 3.1 2h1.2" />
+      <path d="M17.5 10.5 19 15a3.2 3.2 0 0 1-3.1 2h-1.2" />
+      <path d="M12 6.5V20" />
+      <path d="M8 20h8" />
+    </Svg>
+  );
+}
 export function IconTrash(p: IconProps) {
   return (
     <Svg {...p}>
@@ -276,6 +338,7 @@ const MAP: Record<ModuloId, (p: IconProps) => ReactNode> = {
   recetas: IconBook,
   analytics: IconChart,
   usuarios: IconUsers,
+  respaldos: IconDatabase,
 };
 
 export function IconModulo({

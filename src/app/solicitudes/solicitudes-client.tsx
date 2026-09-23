@@ -149,7 +149,7 @@ export function SolicitudesClient({
         ) : null}
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="g-kpis grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi titulo="Total" valor={resumen.total} tono="primary" />
         <Kpi titulo="Pendientes" valor={resumen.pendientes} tono="muted" />
         <Kpi titulo="En producción" valor={resumen.en_produccion} tono="warning" />

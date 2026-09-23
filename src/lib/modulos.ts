@@ -13,6 +13,7 @@ export const MODULOS = [
   { id: "informes", label: "Informes", href: "/informes" },
   { id: "analytics", label: "Data Analytics", href: "/analytics" },
   { id: "usuarios", label: "Usuarios", href: "/usuarios" },
+  { id: "respaldos", label: "Respaldos", href: "/respaldos" },
 ] as const;
 
 export type ModuloId = (typeof MODULOS)[number]["id"];
@@ -52,7 +53,7 @@ export const GRUPOS_NAV: { id: string; label: string; modulos: ModuloId[] }[] =
     {
       id: "sistema",
       label: "Sistema",
-      modulos: ["usuarios"],
+      modulos: ["usuarios", "respaldos"],
     },
   ];
 

@@ -3,6 +3,7 @@
 import { BrandMark, BrandWordmark } from "@/components/ui/brand";
 import {
   IconClose,
+  IconHome,
   IconMenu,
   IconModulo,
   IconSidebarHide,
@@ -12,6 +13,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GRUPOS_NAV, MODULOS, type ModuloId } from "@/lib/modulos";
 import { type PerfilSesion, puede } from "@/lib/auth/permisos-core";
+import { registrarUsuarioInforme } from "@/lib/informes/emision";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 
@@ -55,6 +57,7 @@ export function AppShell({
   const visibleIds = new Set(visibles.map((m) => m.id));
   const nombre =
     [perfil.nombre, perfil.apellido].filter(Boolean).join(" ") || perfil.email;
+  registrarUsuarioInforme(nombre);
   const ini = iniciales(nombre);
 
   const grupos = GRUPOS_NAV.map((g) => ({
@@ -86,7 +89,7 @@ export function AppShell({
         <BrandWordmark light />
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-2 py-3">
+      <nav className="g-nav-scroll flex-1 px-2 py-3">
         {grupos.map((g) => (
           <div key={g.id} className="mb-3.5 last:mb-1">
             <p
@@ -147,10 +150,10 @@ export function AppShell({
   );
 
   return (
-    <div className="flex min-h-full flex-1 bg-[var(--color-background)] text-[var(--color-text)]">
+    <div className="flex h-dvh flex-1 overflow-hidden bg-[var(--color-background)] text-[var(--color-text)]">
       {desktopOpen ? (
         <aside
-          className="hidden w-[var(--sidebar-width)] shrink-0 flex-col md:flex"
+          className="hidden h-full w-[var(--sidebar-width)] shrink-0 flex-col overflow-hidden md:flex"
           style={{ background: "var(--color-sidebar)" }}
         >
           {nav()}
@@ -174,9 +177,9 @@ export function AppShell({
         </div>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header
-          className="flex h-[var(--header-height)] items-center justify-between gap-2 border-b px-3 md:px-4"
+          className="flex h-[var(--header-height)] shrink-0 items-center justify-between gap-2 border-b px-3 md:px-4"
           style={{
             background: "var(--color-surface)",
             borderColor: "var(--color-border)",
@@ -214,13 +217,16 @@ export function AppShell({
             <div className="min-w-0 md:hidden">
               <BrandWordmark />
             </div>
-            <p className="hidden truncate text-[13px] text-[var(--color-text-muted)] md:block">
+            <p className="hidden min-w-0 items-center gap-2 truncate text-[13px] font-medium md:flex">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-[var(--color-primary-light)] text-[var(--color-primary)]">
+                <IconHome className="h-4 w-4" />
+              </span>
               Sistema de Producción
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
-            <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-secondary)] px-1.5 py-1">
+            <div className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1">
               <span
                 className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white"
                 style={{ background: "var(--color-primary)" }}
@@ -241,7 +247,7 @@ export function AppShell({
         </header>
 
         <main
-          className="flex-1"
+          className="min-h-0 flex-1 overflow-y-auto"
           style={{
             padding: "var(--page-pad-y) var(--page-pad-x)",
           }}

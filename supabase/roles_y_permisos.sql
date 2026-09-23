@@ -66,7 +66,8 @@ cross join (
     ('produccion'),
     ('informes'),
     ('analytics'),
-    ('usuarios')
+    ('usuarios'),
+    ('respaldos')
 ) as m(modulo)
 where r.nombre = 'Administrador'
 on conflict (id_rol, modulo) do update set
@@ -93,7 +94,8 @@ cross join (
     ('produccion', false, false, false),
     ('informes', false, false, false),
     ('analytics', false, false, false),
-    ('usuarios', false, false, false)
+    ('usuarios', false, false, false),
+    ('respaldos', false, false, false)
 ) as m(modulo, ver, leer, editar)
 where r.nombre = 'Operario'
 on conflict (id_rol, modulo) do update set
