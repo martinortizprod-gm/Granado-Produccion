@@ -14,7 +14,8 @@ import {
   resumenSolicitudes,
 } from "@/lib/solicitudes/logic";
 import { eliminarSolicitud } from "@/app/solicitudes/actions";
-import { IconPlus } from "@/components/ui/icons";
+import { IconCalendar, IconPlus } from "@/components/ui/icons";
+import { PanelDiasJulianos } from "@/app/solicitudes/dias-julianos";
 import { ColumnPicker } from "@/components/ui/column-picker";
 import {
   RecordDetailDrawer,
@@ -60,6 +61,7 @@ export function SolicitudesClient({
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [seleccionId, setSeleccionId] = useState<number | null>(null);
+  const [julianoAbierto, setJulianoAbierto] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cols = useColumnVisibility("solicitudes", COLS_SOLICITUDES);
@@ -141,13 +143,26 @@ export function SolicitudesClient({
             Seguimiento de pedidos, avance y detalle operativo.
           </p>
         </div>
-        {puedeEditar ? (
-          <Link href="/solicitudes/nueva" className="g-btn g-btn-primary">
-            <IconPlus className="h-4 w-4" />
-            Nueva solicitud
-          </Link>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="g-btn g-btn-icon"
+            title="Días julianos"
+            aria-label="Ver días julianos del año"
+            onClick={() => setJulianoAbierto(true)}
+          >
+            <IconCalendar className="h-4 w-4" />
+          </button>
+          {puedeEditar ? (
+            <Link href="/solicitudes/nueva" className="g-btn g-btn-primary">
+              <IconPlus className="h-4 w-4" />
+              Nueva solicitud
+            </Link>
+          ) : null}
+        </div>
       </div>
+
+      {julianoAbierto ? <PanelDiasJulianos onCerrar={() => setJulianoAbierto(false)} /> : null}
 
       <div className="g-kpis grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi titulo="Total" valor={resumen.total} tono="primary" />
