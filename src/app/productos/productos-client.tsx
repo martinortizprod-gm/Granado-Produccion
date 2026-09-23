@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { IconDownload, IconPlus, IconSearch } from "@/components/ui/icons";
 import { DialogoInforme } from "@/components/ui/informe";
 import { ColumnPicker } from "@/components/ui/column-picker";
+import { FormularioAjuste } from "@/components/ui/formulario-ajuste";
 import {
   RecordDetailDrawer,
+  RowAdjustButton,
   RowDeleteButton,
   RowDetailButton,
   RowEditButton,
@@ -100,12 +102,14 @@ export function ProductosClient({
   etiquetas,
   errorCarga,
   puedeEditar,
+  puedeAjustar,
 }: {
   productos: ProductoVista[];
   envases: OpcionCatalogo[];
   etiquetas: OpcionCatalogo[];
   errorCarga: string | null;
   puedeEditar: boolean;
+  puedeAjustar: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -121,6 +125,7 @@ export function ProductosClient({
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [exportar, setExportar] = useState(false);
+  const [ajuste, setAjuste] = useState<{ item: ProductoVista; lote?: string } | null>(null);
 
   const categorias = useMemo(() => unicos(productos, "categoria"), [productos]);
   const envasesFiltro = useMemo(() => unicos(productos, "envase"), [productos]);
@@ -270,6 +275,37 @@ export function ProductosClient({
           ) : null}
         </div>
       </div>
+
+      {ajuste ? (
+        <FormularioAjuste
+          kind="productos"
+          articulo={{
+            id: ajuste.item.id,
+            codigo: ajuste.item.codigo,
+            nombre: ajuste.item.nombre,
+            categoria: ajuste.item.categoria,
+            medida: "Pall.",
+            stock: ajuste.item.stk_pall,
+            stkUn: ajuste.item.stk_un,
+            stkKg: ajuste.item.stk_kg,
+            lotes: ajuste.item.lotes.map((l) => ({
+              lote: l.lote,
+              stock: l.stk_pall,
+              stkUn: l.stk_un,
+              stkKg: l.stk_kg,
+              unPorPall: l.stk_pall > 0.0005 ? l.stk_un / l.stk_pall : 0,
+              pesoUn: l.stk_un > 0.0005 ? l.stk_kg / l.stk_un : 0,
+            })),
+          }}
+          loteInicial={ajuste.lote}
+          onCerrar={() => setAjuste(null)}
+          onGuardado={() => {
+            setAviso("El ajuste se registró en Movimientos de productos.");
+            setAjuste(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
 
       {exportar ? (
         <DialogoInforme
@@ -510,11 +546,18 @@ export function ProductosClient({
                         {show("categoria") ? <td>{item.categoria || "—"}</td> : null}
                         {show("receta") ? <td>{item.receta_plc || "—"}</td> : null}
                         {show("stk_pall") ? (
-                          <td
-                            className="tabular-nums font-medium"
-                            style={{ color: bajo ? "var(--color-warning)" : undefined }}
-                          >
-                            {nro(item.stk_pall)}
+                          <td>
+                            <div className="flex items-center justify-between gap-1">
+                              <span
+                                className="tabular-nums font-medium"
+                                style={{ color: bajo ? "var(--color-warning)" : undefined }}
+                              >
+                                {nro(item.stk_pall)}
+                              </span>
+                              {puedeAjustar ? (
+                                <RowAdjustButton onClick={() => setAjuste({ item })} />
+                              ) : null}
+                            </div>
                           </td>
                         ) : null}
                         {show("stk_un") ? <td className="tabular-nums">{nro(item.stk_un)}</td> : null}
@@ -522,6 +565,9 @@ export function ProductosClient({
                         <td className="whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             <RowDetailButton onClick={() => setDetalleId(item.id)} />
+                            {puedeAjustar ? (
+                              <RowAdjustButton onClick={() => setAjuste({ item })} />
+                            ) : null}
                             {puedeEditar ? (
                               <>
                                 <RowEditButton onClick={() => abrirEditar(item)} />
@@ -599,10 +645,17 @@ export function ProductosClient({
             ) : (
               <ul className="space-y-1 text-[12.5px]">
                 {detalle.lotes.map((l) => (
-                  <li key={l.lote} className="flex justify-between gap-2">
+                  <li key={l.lote} className="flex items-center justify-between gap-2">
                     <span>{l.lote}</span>
-                    <span className="tabular-nums">
-                      {nro(l.stk_pall)} Pall. · {nro(l.stk_un)} Un. · {nro(l.stk_kg)} kg
+                    <span className="flex items-center gap-1">
+                      <span className="tabular-nums">
+                        {nro(l.stk_pall)} Pall. · {nro(l.stk_un)} Un. · {nro(l.stk_kg)} kg
+                      </span>
+                      {puedeAjustar ? (
+                        <RowAdjustButton
+                          onClick={() => setAjuste({ item: detalle, lote: l.lote })}
+                        />
+                      ) : null}
                     </span>
                   </li>
                 ))}

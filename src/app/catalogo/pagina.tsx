@@ -35,6 +35,7 @@ export async function PaginaCatalogo({ kind }: { kind: KindCatalogo }) {
         articulos={articulos}
         errorCarga={error}
         puedeEditar={puede(perfil, kind, "editar")}
+        puedeAjustar={puede(perfil, "movimientos", "editar")}
       />
     </AppShell>
   );

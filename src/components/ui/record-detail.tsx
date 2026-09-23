@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { IconClose, IconEye, IconPencil, IconTrash } from "@/components/ui/icons";
+import { IconClose, IconEye, IconPencil, IconSwap, IconTrash } from "@/components/ui/icons";
 
 export function RowDetailButton({
   onClick,
@@ -52,6 +52,30 @@ export function RowEditButton({
       }}
     >
       <IconPencil className="h-4 w-4" />
+    </button>
+  );
+}
+
+export function RowAdjustButton({
+  onClick,
+  disabled,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className="g-btn g-btn-icon h-7 w-7"
+      title="Ajustar stock"
+      aria-label="Ajustar stock"
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      <IconSwap className="h-4 w-4" />
     </button>
   );
 }

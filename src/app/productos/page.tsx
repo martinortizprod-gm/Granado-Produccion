@@ -38,6 +38,7 @@ export default async function ProductosPage() {
         etiquetas={datos.etiquetas}
         errorCarga={datos.error}
         puedeEditar={puede(perfil, "productos", "editar")}
+        puedeAjustar={puede(perfil, "movimientos", "editar")}
       />
     </AppShell>
   );

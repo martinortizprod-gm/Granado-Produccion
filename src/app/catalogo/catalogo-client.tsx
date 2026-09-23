@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { IconDownload, IconPlus, IconSearch } from "@/components/ui/icons";
 import { DialogoInforme } from "@/components/ui/informe";
 import { ColumnPicker } from "@/components/ui/column-picker";
+import { FormularioAjuste } from "@/components/ui/formulario-ajuste";
 import {
   DetalleFilas,
   RecordDetailDrawer,
+  RowAdjustButton,
   RowDeleteButton,
   RowDetailButton,
   RowEditButton,
@@ -101,11 +103,13 @@ export function CatalogoClient({
   articulos,
   errorCarga,
   puedeEditar,
+  puedeAjustar,
 }: {
   kind: KindCatalogo;
   articulos: ArticuloVista[];
   errorCarga: string | null;
   puedeEditar: boolean;
+  puedeAjustar: boolean;
 }) {
   const cfg = CATALOGOS[kind];
   const router = useRouter();
@@ -121,6 +125,7 @@ export function CatalogoClient({
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [exportar, setExportar] = useState(false);
+  const [ajuste, setAjuste] = useState<{ item: ArticuloVista; lote?: string } | null>(null);
 
   const categorias = useMemo(() => unicos(articulos, "categoria"), [articulos]);
   const gestiones = useMemo(() => unicos(articulos, "gestion"), [articulos]);
@@ -262,6 +267,33 @@ export function CatalogoClient({
           ) : null}
         </div>
       </div>
+
+      {ajuste ? (
+        <FormularioAjuste
+          kind={kind}
+          articulo={{
+            id: ajuste.item.id,
+            codigo: ajuste.item.codigo,
+            nombre: ajuste.item.nombre,
+            categoria: ajuste.item.categoria,
+            gestion: ajuste.item.gestion,
+            medida: ajuste.item.medida || cfg.unidad,
+            stock: ajuste.item.stock,
+            lotes: ajuste.item.lotes.map((l) => ({
+              lote: l.lote,
+              stock: l.stock,
+              vencimiento: l.vencimiento,
+            })),
+          }}
+          loteInicial={ajuste.lote}
+          onCerrar={() => setAjuste(null)}
+          onGuardado={() => {
+            setAviso("El ajuste se registró en Movimientos.");
+            setAjuste(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
 
       {exportar ? (
         <DialogoInforme
@@ -496,20 +528,30 @@ export function CatalogoClient({
                           </td>
                         ) : null}
                         {show("stock") ? (
-                          <td
-                            className="tabular-nums font-medium"
-                            style={{
-                              color: bajo
-                                ? "var(--color-warning)"
-                                : "var(--color-primary)",
-                            }}
-                          >
-                            {nroStock(item.stock)} {item.medida || cfg.unidad}
+                          <td>
+                            <div className="flex items-center justify-between gap-1">
+                              <span
+                                className="tabular-nums font-medium"
+                                style={{
+                                  color: bajo
+                                    ? "var(--color-warning)"
+                                    : "var(--color-primary)",
+                                }}
+                              >
+                                {nroStock(item.stock)} {item.medida || cfg.unidad}
+                              </span>
+                              {puedeAjustar ? (
+                                <RowAdjustButton onClick={() => setAjuste({ item })} />
+                              ) : null}
+                            </div>
                           </td>
                         ) : null}
                         <td className="whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             <RowDetailButton onClick={() => setDetalleId(item.id)} />
+                            {puedeAjustar ? (
+                              <RowAdjustButton onClick={() => setAjuste({ item })} />
+                            ) : null}
                             {puedeEditar ? (
                               <>
                                 <RowEditButton onClick={() => abrirEditar(item)} />
@@ -589,7 +631,7 @@ export function CatalogoClient({
             ) : (
               <ul className="space-y-1 text-[12.5px]">
                 {detalle.lotes.map((l) => (
-                  <li key={l.lote} className="flex justify-between gap-2">
+                  <li key={l.lote} className="flex items-center justify-between gap-2">
                     <span>
                       {l.lote}
                       {l.vencimiento ? (
@@ -599,8 +641,13 @@ export function CatalogoClient({
                         </span>
                       ) : null}
                     </span>
-                    <span className="tabular-nums font-medium">
-                      {nroStock(l.stock)} {detalle.medida || cfg.unidad}
+                    <span className="flex items-center gap-1">
+                      <span className="tabular-nums font-medium">
+                        {nroStock(l.stock)} {detalle.medida || cfg.unidad}
+                      </span>
+                      {puedeAjustar ? (
+                        <RowAdjustButton onClick={() => setAjuste({ item: detalle, lote: l.lote })} />
+                      ) : null}
                     </span>
                   </li>
                 ))}
