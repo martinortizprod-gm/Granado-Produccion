@@ -1,0 +1,22 @@
+---
+description: Supabase es la base de datos. No inventar campos ni cambiar tablas.
+alwaysApply: true
+---
+
+# Datos y Supabase
+
+Supabase (PostgreSQL) es la única persistencia operativa. Lectura y
+escritura por el cliente de `src/lib/supabase/` y las actions
+del servidor. El esquema vive en `supabase/`.
+
+- `data/sistema.db` del escritorio Python quedó en `Obsoleto/` (origen
+  histórico / migración). No es la base activa.
+- No cambies nombres de tablas ni de columnas.
+- No agregues campos a la base en silencio. Si hiciera falta, explicalo antes.
+- No inventes estados, relaciones ni datos porque aparezcan en un mockup.
+- Prioridad: código/datos reales > prompt (funcionalidad) > imagen (diseño).
+- Reutilizá servicios y actions existentes. No crees un segundo sistema
+  de persistencia.
+- Una sola fuente de verdad: lo producido se calcula desde Producción
+  cuando el lote coincide.
+- Los informes pueden seguir exportándose a `.xlsx`.

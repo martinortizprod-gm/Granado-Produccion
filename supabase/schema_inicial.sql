@@ -1,5 +1,5 @@
 -- =============================================================================
--- Granado Producción — esquema inicial Supabase (espejo de data/sistema.db)
+-- Granado Producción — esquema inicial Supabase (espejo del SQLite histórico)
 -- Pegar en: Supabase → SQL Editor → Run
 --
 -- Qué hace:

@@ -1,0 +1,15 @@
+---
+description: No verificar automáticamente. El usuario abre Granado y confirma el resultado.
+alwaysApply: true
+---
+
+# Verificación manual
+
+No ejecutes la aplicación, no tomes capturas, no hagas smoke tests ni
+abras el servidor de Next.js al terminar un cambio.
+
+Cuando termines, avisá en español que ya está listo. El usuario abre el
+sistema y dice si quedó bien o qué ajustar.
+
+No dejes scripts temporales (`_test_*.py`, `_analizar_*.ts`) ni capturas
+en `docs/`.

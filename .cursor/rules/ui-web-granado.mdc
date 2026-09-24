@@ -1,0 +1,22 @@
+---
+description: UI web Granado — sistema de diseño obligatorio para Next.js
+globs:
+  - src/**
+alwaysApply: false
+---
+
+# UI Web Granado
+
+Todas las nuevas interfaces y componentes deben respetar el sistema de diseño documentado en `docs/UI_DESIGN_SYSTEM.md` y reutilizar los componentes/tokens visuales existentes antes de crear nuevos estilos.
+
+- Tokens y clases: `src/app/globals.css` (`.g-card`, `.g-btn-*`, `.g-table`, `.g-stack`, etc.).
+- Densidad: pensada para ~1366×768; preferir controles de 36px y gaps de 8/12/16.
+- Shell: `src/components/app-shell.tsx`.
+- Branding: `src/components/ui/brand.tsx` — logo fábrica en `/brand/granado-icon.png` (no hoja de mockups).
+- Iconos: `src/components/ui/icons.tsx`.
+- Navegación: `src/lib/modulos.ts` (`MODULOS` + `GRUPOS_NAV`); no duplicar rutas ni alterar permisos por cambios visuales.
+- Tablas: `.g-table-wrap` + `.g-table-scroll` + `.g-table` + `.g-row-active`. El encabezado queda sticky al scrollear. Truncado con `title` cuando haga falta.
+- Tablas de registros: `ColumnPicker` + `useColumnVisibility` y detalle con `RowDetailButton` / `RecordDetailDrawer`. No inventar campos.
+- Filtros: `.g-filters`. En PC (≥1024px) búsqueda y filtros en una sola fila; en tablet y móvil, uno debajo del otro.
+- Cambios visuales solamente: no modificar Auth, Supabase, SQL, actions ni lógica de negocio.
+- Mockups = referencia de lenguaje visual, no especificación de funcionalidad.

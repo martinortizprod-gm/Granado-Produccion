@@ -35,7 +35,7 @@ Botón **Claro / Oscuro** en la barra superior (se guarda en el navegador).
 ### Subir a GitHub / Vercel
 
 ```powershell
-cd C:\Produccion-Granado\Py-Produccion\web
+cd C:\Produccion-Granado\Py-Produccion
 git add .
 git commit -m "Login con Supabase Auth"
 git push

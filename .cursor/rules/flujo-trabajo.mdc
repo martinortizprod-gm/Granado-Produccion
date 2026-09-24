@@ -1,0 +1,14 @@
+---
+description: Cómo trabajar en Granado para implementar más rápido y con menos idas y vueltas.
+alwaysApply: true
+---
+
+# Flujo de trabajo
+
+Respondé en español. No hagas commits ni push salvo pedido explícito.
+
+Antes de codear, leé los archivos y las columnas reales. No implementes con datos de ejemplo del mockup.
+
+Cambios chicos y locales. No refactors extra. No archivos de documentación no pedidos.
+
+Al terminar: listá qué cambió en 1-3 frases y esperá la revisión manual del usuario.

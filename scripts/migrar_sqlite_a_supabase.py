@@ -1,18 +1,21 @@
 """
-Migra data/sistema.db (SQLite) → Supabase (PostgreSQL vía REST).
+Migra sistema.db (SQLite del escritorio) → Supabase (PostgreSQL vía REST).
+
+La base histórica quedó en:
+  Obsoleto/Py-Produccion-escritorio-24.09.2026/data/sistema.db
 
 Requisitos:
-  - web/.env.local con:
+  - .env.local con:
       NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
       SUPABASE_SERVICE_ROLE_KEY=...   (Settings → API → service_role)
 
-Uso (desde la raíz Py-Produccion, con el venv activado):
+Uso (desde la raíz del repo):
 
-  python web/scripts/migrar_sqlite_a_supabase.py
+  python scripts/migrar_sqlite_a_supabase.py
 
 Opciones:
-  python web/scripts/migrar_sqlite_a_supabase.py --solo catalogo_productos,usuarios
-  python web/scripts/migrar_sqlite_a_supabase.py --dry-run
+  python scripts/migrar_sqlite_a_supabase.py --solo catalogo_productos,usuarios
+  python scripts/migrar_sqlite_a_supabase.py --dry-run
 """
 
 from __future__ import annotations
@@ -25,10 +28,15 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-WEB = ROOT / "web"
-DB_PATH = ROOT / "data" / "sistema.db"
-ENV_PATH = WEB / ".env.local"
+ROOT = Path(__file__).resolve().parents[1]
+DB_PATH = (
+    ROOT
+    / "Obsoleto"
+    / "Py-Produccion-escritorio-24.09.2026"
+    / "data"
+    / "sistema.db"
+)
+ENV_PATH = ROOT / ".env.local"
 
 # No migrar basura de Excel ni metadatos internos si no hace falta.
 SKIP_TABLES = {"tablas_detalle"}
@@ -43,7 +51,7 @@ BATCH = 200
 
 def cargar_env(ruta: Path) -> dict[str, str]:
     if not ruta.is_file():
-        raise SystemExit(f"No está {ruta}. Creá web/.env.local primero.")
+        raise SystemExit(f"No está {ruta}. Creá .env.local primero.")
     out: dict[str, str] = {}
     for linea in ruta.read_text(encoding="utf-8").splitlines():
         linea = linea.strip()
@@ -157,7 +165,7 @@ def main() -> None:
         not service_key or service_key.startswith("tu_")
     ):
         raise SystemExit(
-            "Falta SUPABASE_SERVICE_ROLE_KEY en web/.env.local\n"
+            "Falta SUPABASE_SERVICE_ROLE_KEY en .env.local\n"
             "Supabase → Project Settings → API → service_role (secret)"
         )
 
