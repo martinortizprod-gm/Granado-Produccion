@@ -26,9 +26,11 @@ import {
   MovimientoVista,
   resumenMovimientos,
   stockLote,
+  tipoClave,
   unicos,
 } from "@/lib/movimientos/logic";
 import { aFecha, fechaVisible, numero } from "@/lib/solicitudes/logic";
+import { etiquetaParte, type ParteVista } from "@/lib/terceros/logic";
 
 function nro(valor: number) {
   const n = Number(valor) || 0;
@@ -68,10 +70,14 @@ export function MovimientosClient({
   kinds,
   errorCarga,
   puedeEditar,
+  proveedores,
+  errorProveedores,
 }: {
   kinds: Record<KindMovimiento, DatosKind>;
   errorCarga: string | null;
   puedeEditar: boolean;
+  proveedores: ParteVista[];
+  errorProveedores: string | null;
 }) {
   const router = useRouter();
   const [kind, setKind] = useState<KindMovimiento>("ingredientes");
@@ -109,6 +115,7 @@ export function MovimientosClient({
       cols.push(
         { id: "cantidad", label: "Cantidad" },
         { id: "remito", label: "Remito" },
+        { id: "proveedor", label: "Proveedor" },
         { id: "gestion", label: "Gestión" },
       );
     }
@@ -420,7 +427,31 @@ export function MovimientosClient({
                 />
               </label>
             )}
-            {cfg.proveedor ? (
+            {tipoClave(form.tipo) === "ingreso" && !cfg.esProducto ? (
+              <label className="block">
+                <span className="g-label">Proveedor</span>
+                <select
+                  className="g-input"
+                  value={form.proveedor}
+                  onChange={(e) => setForm({ ...form, proveedor: e.target.value })}
+                >
+                  <option value="">Sin especificar</option>
+                  {proveedores.map((p) => (
+                    <option key={p.id} value={p.nombre}>
+                      {etiquetaParte(p)}
+                    </option>
+                  ))}
+                  {form.proveedor && !proveedores.some((p) => p.nombre === form.proveedor) ? (
+                    <option value={form.proveedor}>{form.proveedor}</option>
+                  ) : null}
+                </select>
+                {errorProveedores ? (
+                  <span className="mt-1 block text-[11px] text-[var(--color-danger)]">
+                    No se pudo cargar el listado de proveedores.
+                  </span>
+                ) : null}
+              </label>
+            ) : cfg.proveedor ? (
               <label className="block">
                 <span className="g-label">Proveedor</span>
                 <input
@@ -519,6 +550,7 @@ export function MovimientosClient({
                   {cfg.esProducto && show("stk_kg") ? <th>Stk Kg.</th> : null}
                   {!cfg.esProducto && show("cantidad") ? <th>Cantidad</th> : null}
                   {!cfg.esProducto && show("remito") ? <th>Remito</th> : null}
+                  {!cfg.esProducto && show("proveedor") ? <th>Proveedor</th> : null}
                   {!cfg.esProducto && show("gestion") ? <th>Gestión</th> : null}
                   <th>Acciones</th>
                 </tr>
@@ -555,6 +587,13 @@ export function MovimientosClient({
                         </td>
                       ) : null}
                       {!cfg.esProducto && show("remito") ? <td>{item.remito || "—"}</td> : null}
+                      {!cfg.esProducto && show("proveedor") ? (
+                        <td className="max-w-[160px]">
+                          <span className="g-truncate block" title={item.proveedor || undefined}>
+                            {item.proveedor || "—"}
+                          </span>
+                        </td>
+                      ) : null}
                       {!cfg.esProducto && show("gestion") ? <td>{item.gestion || "—"}</td> : null}
                       <td className="whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
@@ -604,7 +643,9 @@ export function MovimientosClient({
                   <Fila label="Categoría" valor={detalle.categoria || "—"} />
                 </>
               )}
-              {cfg.proveedor ? <Fila label="Proveedor" valor={detalle.proveedor || "—"} /> : null}
+              {(cfg.proveedor || (detalle.tipo === "ingreso" && !cfg.esProducto)) ? (
+                <Fila label="Proveedor" valor={detalle.proveedor || "—"} />
+              ) : null}
               <Fila label="Observaciones" valor={detalle.observaciones || "—"} />
               <Fila label="Id" valor={String(detalle.id)} />
             </dl>

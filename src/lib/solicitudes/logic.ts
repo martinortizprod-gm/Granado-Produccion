@@ -40,6 +40,7 @@ export type SolicitudVista = {
   orden_compra: string;
   lote: string;
   orden_produccion: string;
+  cliente: string;
   id_producto: number | null;
   id_version: number | null;
   id_envase: number | null;
@@ -273,6 +274,7 @@ export function enriquecerSolicitud(
     orden_compra: texto(fila.orden_compra),
     lote,
     orden_produccion: texto(fila.orden_produccion),
+    cliente: texto(fila.cliente),
     id_producto: idProducto,
     id_version: idVersion,
     id_envase: idEnvase,
@@ -378,6 +380,7 @@ export function filtrarSolicitudes(
         item.lote,
         item.orden_compra,
         item.orden_produccion,
+        item.cliente,
         item.envase,
         item.nombre_etiqueta,
       ];
@@ -409,6 +412,7 @@ export function armarFilaGuardar(
     orden_compra: string;
     lote: string;
     orden_produccion: string;
+    cliente?: string;
     id_producto: number;
     id_version: number;
     pallets: number;
@@ -446,6 +450,7 @@ export function armarFilaGuardar(
     orden_compra: /^\d+$/.test(oc) ? Number(oc) : oc || null,
     lote: texto(datos.lote),
     orden_produccion: /^\d+$/.test(op) ? Number(op) : op || null,
+    cliente: texto(datos.cliente) || null,
     id_producto: datos.id_producto,
     id_version: datos.id_version,
     pallets_cargados: pallets,

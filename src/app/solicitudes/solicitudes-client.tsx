@@ -36,6 +36,7 @@ const COLS_SOLICITUDES = [
   { id: "estado", label: "Estado" },
   { id: "fecha", label: "Fecha fin" },
   { id: "lote", label: "Lote" },
+  { id: "cliente", label: "Cliente" },
   { id: "producto", label: "Producto" },
   { id: "version", label: "Versión" },
   { id: "oc", label: "OC / SAP" },
@@ -259,6 +260,7 @@ export function SolicitudesClient({
                 {show("estado") ? <th>Estado</th> : null}
                 {show("fecha") ? <th>Fecha fin</th> : null}
                 {show("lote") ? <th>Lote</th> : null}
+                {show("cliente") ? <th>Cliente</th> : null}
                 {show("producto") ? <th>Producto</th> : null}
                 {show("version") ? <th>Vers.</th> : null}
                 {show("oc") ? <th>OC / SAP</th> : null}
@@ -304,6 +306,13 @@ export function SolicitudesClient({
                       {show("lote") ? (
                         <td className="font-medium whitespace-nowrap">
                           {s.lote || "—"}
+                        </td>
+                      ) : null}
+                      {show("cliente") ? (
+                        <td className="max-w-[140px]">
+                          <span className="g-truncate block" title={s.cliente || undefined}>
+                            {s.cliente || "—"}
+                          </span>
                         </td>
                       ) : null}
                       {show("producto") ? (
@@ -451,6 +460,7 @@ function Detalle({ solicitud: s }: { solicitud: SolicitudVista }) {
         />
         <Fila label="Etiqueta" valor={s.nombre_etiqueta} />
         <Fila label="OC / SAP" valor={s.orden_compra} />
+        <Fila label="Cliente" valor={s.cliente} />
         <Fila label="Orden prod." valor={s.orden_produccion} />
         <Fila label="Registro" valor={fechaVisible(s.fecha_registro)} />
         <Fila label="Estimada" valor={fechaVisible(s.fecha_estimada)} />

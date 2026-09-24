@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { getPerfilSesion, puede } from "@/lib/auth/permisos";
 import { cargarDatosSolicitudes } from "@/lib/solicitudes/data";
+import { cargarPartes } from "@/lib/terceros/data";
 import { FormularioSolicitud } from "@/app/solicitudes/formulario-solicitud";
 import { redirect, notFound } from "next/navigation";
 
@@ -21,6 +22,7 @@ export default async function EditarSolicitudPage({
   }
 
   const { productos, solicitudes, error } = await cargarDatosSolicitudes();
+  const clientes = await cargarPartes("clientes");
   const solicitud = solicitudes.find((s) => s.id === id);
   if (!solicitud) notFound();
 
@@ -31,7 +33,12 @@ export default async function EditarSolicitudPage({
           {error}
         </p>
       ) : null}
-      <FormularioSolicitud productos={productos} solicitud={solicitud} />
+      <FormularioSolicitud
+        productos={productos}
+        clientes={clientes.items}
+        errorClientes={clientes.error}
+        solicitud={solicitud}
+      />
     </AppShell>
   );
 }

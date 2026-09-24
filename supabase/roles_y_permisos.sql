@@ -61,11 +61,14 @@ cross join (
     ('etiquetas'),
     ('productos'),
     ('recetas'),
+    ('proveedores'),
+    ('clientes'),
     ('movimientos'),
     ('planificacion'),
     ('produccion'),
     ('informes'),
     ('analytics'),
+    ('contabilidad'),
     ('usuarios'),
     ('respaldos')
 ) as m(modulo)
@@ -87,6 +90,8 @@ cross join (
     ('insumos', true, true, false),
     ('envases', true, true, false),
     ('etiquetas', true, true, false),
+    ('proveedores', true, true, false),
+    ('clientes', true, true, false),
     ('solicitudes', false, false, false),
     ('recetas', false, false, false),
     ('movimientos', false, false, false),
@@ -94,6 +99,7 @@ cross join (
     ('produccion', false, false, false),
     ('informes', false, false, false),
     ('analytics', false, false, false),
+    ('contabilidad', false, false, false),
     ('usuarios', false, false, false),
     ('respaldos', false, false, false)
 ) as m(modulo, ver, leer, editar)

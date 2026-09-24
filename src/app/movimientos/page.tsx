@@ -2,6 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { MovimientosClient } from "@/app/movimientos/movimientos-client";
 import { getPerfilSesion, puede } from "@/lib/auth/permisos";
 import { cargarMovimientos } from "@/lib/movimientos/data";
+import { cargarPartes } from "@/lib/terceros/data";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function MovimientosPage() {
   }
 
   const datos = await cargarMovimientos();
+  const proveedores = await cargarPartes("proveedores");
 
   return (
     <AppShell perfil={perfil} activo="movimientos">
@@ -36,6 +38,8 @@ export default async function MovimientosPage() {
         kinds={datos.kinds}
         errorCarga={datos.error}
         puedeEditar={puede(perfil, "movimientos", "editar")}
+        proveedores={proveedores.items}
+        errorProveedores={proveedores.error}
       />
     </AppShell>
   );

@@ -16,6 +16,7 @@ export type DatosFormSolicitud = {
   orden_compra: string;
   lote: string;
   orden_produccion: string;
+  cliente: string;
   id_producto: number;
   id_version: number;
   id_envase: number | null;

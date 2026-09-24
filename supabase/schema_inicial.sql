@@ -23,6 +23,7 @@ drop table if exists public.catalogo_etiquetas cascade;
 drop table if exists public.catalogo_ingredientes cascade;
 drop table if exists public.catalogo_insumos cascade;
 drop table if exists public.catalogo_productos cascade;
+drop table if exists public.clientes cascade;
 drop table if exists public.causas_paradas cascade;
 drop table if exists public.consumo cascade;
 drop table if exists public.limpieza_equipos cascade;
@@ -39,6 +40,7 @@ drop table if exists public.planificacion_mensual cascade;
 drop table if exists public.planificacion_paradas cascade;
 drop table if exists public.planificacion_rendimientos cascade;
 drop table if exists public.produccion cascade;
+drop table if exists public.proveedores cascade;
 drop table if exists public.recetas cascade;
 drop table if exists public.registro_versiones cascade;
 drop table if exists public.responsables_producciones cascade;
@@ -167,7 +169,8 @@ create table public.movimientos_envases (
   cantidad numeric,
   remito text,
   gestion text,
-  observaciones text
+  observaciones text,
+  proveedor text
 );
 
 create table public.movimientos_etiquetas (
@@ -179,7 +182,8 @@ create table public.movimientos_etiquetas (
   lote text,
   cantidad numeric,
   remito text,
-  observaciones text
+  observaciones text,
+  proveedor text
 );
 
 create table public.movimientos_ingredientes (
@@ -207,7 +211,8 @@ create table public.movimientos_insumos (
   cantidad numeric,
   remito text,
   gestion text,
-  observaciones text
+  observaciones text,
+  proveedor text
 );
 
 create table public.movimientos_productos (
@@ -334,7 +339,30 @@ create table public.solicitudes (
   peso_total numeric,
   fecha_estimada text,
   fecha_fin text,
-  pallets_pendientes numeric
+  pallets_pendientes numeric,
+  cliente text
+);
+
+create table public.proveedores (
+  id bigint primary key,
+  nombre text not null,
+  razon_social text not null,
+  cuit text,
+  celular text,
+  mail text,
+  ubicacion text,
+  observaciones text
+);
+
+create table public.clientes (
+  id bigint primary key,
+  nombre text not null,
+  razon_social text not null,
+  cuit text,
+  celular text,
+  mail text,
+  ubicacion text,
+  observaciones text
 );
 
 -- Perfil operativo (espejo desktop). La clave NO se usa en web:
@@ -362,6 +390,7 @@ alter table public.catalogo_etiquetas enable row level security;
 alter table public.catalogo_ingredientes enable row level security;
 alter table public.catalogo_insumos enable row level security;
 alter table public.catalogo_productos enable row level security;
+alter table public.clientes enable row level security;
 alter table public.causas_paradas enable row level security;
 alter table public.consumo enable row level security;
 alter table public.limpieza_equipos enable row level security;
@@ -378,6 +407,7 @@ alter table public.planificacion_mensual enable row level security;
 alter table public.planificacion_paradas enable row level security;
 alter table public.planificacion_rendimientos enable row level security;
 alter table public.produccion enable row level security;
+alter table public.proveedores enable row level security;
 alter table public.recetas enable row level security;
 alter table public.registro_versiones enable row level security;
 alter table public.responsables_producciones enable row level security;
@@ -400,6 +430,7 @@ begin
     'catalogo_ingredientes',
     'catalogo_insumos',
     'catalogo_productos',
+    'clientes',
     'causas_paradas',
     'consumo',
     'limpieza_equipos',
@@ -416,6 +447,7 @@ begin
     'planificacion_paradas',
     'planificacion_rendimientos',
     'produccion',
+    'proveedores',
     'recetas',
     'registro_versiones',
     'responsables_producciones',

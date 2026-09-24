@@ -22,7 +22,11 @@ function suscribir(key: string) {
   };
 }
 
-export function useColumnVisibility(tableId: string, cols: ColDef[]) {
+export function useColumnVisibility(
+  tableId: string,
+  cols: ColDef[],
+  defaultHidden: readonly string[] = [],
+) {
   const key = `granado-cols:${tableId}`;
 
   const raw = useSyncExternalStore(
@@ -32,15 +36,15 @@ export function useColumnVisibility(tableId: string, cols: ColDef[]) {
   );
 
   const hidden = useMemo(() => {
-    if (!raw) return new Set<string>();
+    if (!raw) return new Set<string>(defaultHidden);
     try {
       const arr = JSON.parse(raw) as unknown;
-      if (!Array.isArray(arr)) return new Set<string>();
+      if (!Array.isArray(arr)) return new Set<string>(defaultHidden);
       return new Set(arr.filter((x): x is string => typeof x === "string"));
     } catch {
       return new Set<string>();
     }
-  }, [raw]);
+  }, [raw, defaultHidden]);
 
   const isVisible = useCallback(
     (id: string) => {

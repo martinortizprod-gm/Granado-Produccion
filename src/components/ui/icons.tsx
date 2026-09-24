@@ -75,6 +75,14 @@ export function IconChart(p: IconProps) {
     </Svg>
   );
 }
+export function IconDollar(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 3v18" />
+      <path d="M16.5 7.2c0-1.6-2-2.7-4.5-2.7S7.5 5.6 7.5 7.2 9.5 9.8 12 9.8s4.5 1.1 4.5 2.7-2 2.7-4.5 2.7-4.5-1.1-4.5-2.7" />
+    </Svg>
+  );
+}
 export function IconCalculator(p: IconProps) {
   return (
     <Svg {...p}>
@@ -155,6 +163,15 @@ export function IconBook(p: IconProps) {
     <Svg {...p}>
       <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z" />
       <path d="M8 4v16" />
+    </Svg>
+  );
+}
+export function IconBuilding(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 21V5l8-2 8 2v16" />
+      <path d="M9 21v-6h6v6" />
+      <path d="M8 8h2M14 8h2M8 12h2M14 12h2" />
     </Svg>
   );
 }
@@ -336,7 +353,10 @@ const MAP: Record<ModuloId, (p: IconProps) => ReactNode> = {
   etiquetas: IconTag,
   productos: IconLayers,
   recetas: IconBook,
+  proveedores: IconBuilding,
+  clientes: IconUsers,
   analytics: IconChart,
+  contabilidad: IconCalculator,
   usuarios: IconUsers,
   respaldos: IconDatabase,
 };

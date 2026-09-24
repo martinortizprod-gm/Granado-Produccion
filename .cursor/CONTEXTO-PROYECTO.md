@@ -186,7 +186,7 @@ Archivos clave de infra:
 - `leer` → leer **o** editar
 - `editar` → solo editar
 
-**Roles seed:** Administrador (sistema, todo) y Operario (ver/leer catálogos + inicio + productos).
+**Roles seed:** Administrador (sistema, todo) y Operario (ver/leer catálogos, proveedores, clientes, inicio y productos). El script `supabase/proveedores_y_clientes.sql` inserta esos permisos en una base que ya tenía roles. Un rol custom no los tiene hasta que se guarden en Usuarios.
 
 **Patrón en cada página:**
 
@@ -205,22 +205,32 @@ Módulo nuevo: registrarlo en `MODULOS` + `GRUPOS_NAV` **y** en `roles_y_permiso
 
 ## 8. Módulos (rutas reales)
 
-Definidos en `src/lib/modulos.ts`. Grupos del menú (solo visual): Operación, Maestros, Análisis, Sistema.
+Definidos en `src/lib/modulos.ts`. Grupos del menú (solo visual): Operación, Maestros, Análisis, Contabilidad, Sistema.
 
 | Módulo | Ruta | Qué hace |
 |--------|------|----------|
 | Inicio | `/` | Dashboard: KPIs, actividad, accesos según permiso. |
-| Solicitudes | `/solicitudes` | Pedidos de producción. Alta `/solicitudes/nueva`, edición `/solicitudes/[id]/editar`. |
+| Solicitudes | `/solicitudes` | Pedidos de producción. Alta `/solicitudes/nueva`, edición `/solicitudes/[id]/editar`. El formulario elige **cliente** de `clientes` (opcional). Se guarda el nombre en `solicitudes.cliente` y se ve en la grilla y en el detalle. |
 | Producción | `/produccion` | Jornada por solicitud/lote: pallets, horas, paradas, consumos, barridos, responsables, cierre de stock. |
-| Movimientos | `/movimientos` | Ingresos/egresos de ingredientes, insumos, envases, etiquetas, productos. |
+| Movimientos | `/movimientos` | Ingresos/egresos de ingredientes, insumos, envases, etiquetas, productos. En un **ingreso** de ingrediente, envase, etiqueta o insumo, Proveedor es un desplegable de `proveedores` (opcional). El egreso de ingredientes sigue siendo texto libre. La grilla de esos cuatro tipos muestra la columna Proveedor (también en el selector de columnas y en el detalle). Productos no tienen proveedor. |
 | Planificación | `/planificacion` | Plan mensual (`planificacion_*`): generar/recalcular mes, rendimientos, horarios, paradas. Query `?mes=&ops=`. |
-| Informes | `/informes` | **Placeholder** (“en construcción”). Los permisos sí aplican. Hay exportaciones .xlsx en otros módulos. |
+| Informes | `/informes` | Tres fichas operativas (no es un segundo Analytics). Lee con `cargarProduccion()`. Lo producido sale de las jornadas de esa solicitud. Exporta Excel/PDF con `DialogoInforme`. |
 | Ingredientes / Insumos / Envases / Etiquetas | `/ingredientes` etc. | Misma plantilla `src/app/catalogo/`. CRUD del catálogo + stock. |
+| Proveedores / Clientes | `/proveedores`, `/clientes` | Plantilla compartida `src/app/terceros/` + `src/lib/terceros/`. Menú Maestros. CRUD: nombre y razón social obligatorios; CUIT, celular, mail, ubicación y observaciones opcionales. El nombre no se repite (comparación sin mayúsculas, solo en la app). |
 | Productos | `/productos` | Productos terminados, stock (movimientos + cierres), vínculo envase/etiqueta. |
 | Recetas | `/recetas` | Versiones (`registro_versiones`) y líneas (`recetas`) por producto. |
 | Data Analytics | `/analytics` | Tabs: producción, stock, trazabilidad, reportes. |
+| Contabilidad | `/contabilidad` | Cuatro solapas (ingredientes, envases, etiquetas, insumos). Cada una lista los ingresos de ese tipo, abre en el mes en curso y, por defecto, solo los que **impactan**. No impacta pone los costos en cero (artículos de clientes que no se pagan). Costos y pagos llevan moneda ARS o USD. La cotización (pesos por dólar) vive en `contable_cotizacion` y los totales de la grilla se muestran en pesos. Eliminar la ficha no borra el movimiento. |
 | Usuarios | `/usuarios` | Roles, permisos, altas. Crea user en Auth + fila `usuarios`. Service role. |
 | Respaldos | `/respaldos` | Export xlsx / pdf / sql / json (`POST /api/respaldos`). |
+
+**Informes (detalle):**
+
+- UI: `src/app/informes/page.tsx` + `informes-client.tsx`. Lógica: `src/lib/informes/logic.ts` + `exportar.ts`. Infra de baja: `src/lib/informes/descarga.ts` + `emision.ts` (también la usan otros módulos).
+- **Hoja de lote:** un lote (solicitud). Cabecera, jornadas (kg, pallets, unidades, hs disponibles, hs productivas, hs paradas prog., hs paradas no prog., kg/h), consumos, paradas (columnas hs progr. / hs no progr.), responsables, barridos, limpieza.
+- **Consumo vs receta:** teórico = `participacion × kg producidos` de la versión (`formulas` / `recetas`). Real = `consumo` de ingredientes de esas jornadas. Lo que no está en la receta se marca “Fuera de receta”.
+- **Solicitudes vs producido:** período (desde/hasta). Kg pedidos vs kg de jornadas por lote. Sin jornada, producido = 0. Filtro de fechas = el de solicitudes (`fecha_estimada` / `fecha_fin` / `fecha_registro`).
+- No hay server actions propias (solo lectura). No inventar tablas ni un stock paralelo.
 
 Casi todas las pages son Server Components con `dynamic = "force-dynamic"` y un `*-client.tsx`.
 
@@ -228,9 +238,11 @@ Casi todas las pages son Server Components con `dynamic = "force-dynamic"` y un 
 
 - solicitudes: `crearSolicitud`, `actualizarSolicitud`, `eliminarSolicitud`, `solicitudTieneProduccion`
 - catalogo: `guardarCatalogo`, `eliminarCatalogo`
+- terceros (`src/app/terceros/actions.ts`, lo usan `/proveedores` y `/clientes`): `guardarParte`, `eliminarParte`
 - productos: `guardarProducto`, `eliminarProducto`
 - recetas: `guardarVersion`, `eliminarVersion`, `guardarLinea`, `eliminarLinea`
-- movimientos: `guardarMovimiento`, `eliminarMovimiento`
+- movimientos: `guardarMovimiento`, `eliminarMovimiento` (si el movimiento deja de ser ingreso, o se elimina, también se borra su ficha contable)
+- contabilidad: `guardarContable`, `eliminarContable`, `marcarImpacto`, `actualizarDolar`, `abrirComprobante`
 - planificacion: `generarMes`, `recalcularMes`, `guardarDia`, `alternarContempla`, `asignarCategoria`, `eliminarDia`, `guardarRendimientos`, `guardarCapacidades`, `guardarHorarios`, `guardarParadas`
 - produccion: `registrarJornada`, `eliminarJornada`, `guardarPrevios`, `agregarCatalogoPrevio`
 - usuarios: `listarRoles`, `listarPermisosRol`, `guardarRol`, `eliminarRol`, `listarUsuariosApp`, `crearUsuarioApp`, `actualizarUsuarioApp`
@@ -241,7 +253,7 @@ Antes de inventar una action, buscar si ya existe.
 
 ## 9. Datos (tablas reales)
 
-Esquema: `supabase/schema_inicial.sql` (33 tablas de negocio). Roles: `supabase/roles_y_permisos.sql` (+ `roles`, `rol_permisos`).
+Esquema: `supabase/schema_inicial.sql` (32 tablas, incluidas `proveedores` y `clientes`). Roles: `supabase/roles_y_permisos.sql` (`roles`, `rol_permisos`).
 
 **No migrar** `tablas_detalle` (basura de Excel).
 
@@ -251,15 +263,21 @@ Esquema: `supabase/schema_inicial.sql` (33 tablas de negocio). Roles: `supabase/
 
 **Recetas:** `registro_versiones`, `recetas`
 
-**Stock:** `movimientos_ingredientes`, `movimientos_insumos`, `movimientos_envases`, `movimientos_etiquetas`, `movimientos_productos`
+**Stock:** `movimientos_ingredientes`, `movimientos_insumos`, `movimientos_envases`, `movimientos_etiquetas`, `movimientos_productos`. Las cuatro primeras tienen `proveedor text` (ingredientes ya lo tenía; las otras tres se agregaron en `proveedores_y_clientes.sql`). No es FK: se guarda el **nombre** del proveedor. Si después se renombra el maestro, el movimiento conserva el texto anterior y, al editarlo, sigue apareciendo como opción.
+
+**Maestros de terceros:** `proveedores` y `clientes`, misma forma. `id bigint` (la app asigna `max(id)+1`), `nombre text not null`, `razon_social text not null`, `cuit`, `celular`, `mail`, `ubicacion`, `observaciones` (text, null). `solicitudes.cliente text` guarda el nombre del cliente, también sin FK.
 
 **Planificación:** `planificacion_mensual`, `planificacion_capacidades`, `planificacion_horarios`, `planificacion_paradas`, `planificacion_rendimientos`
+
+**Contabilidad:** `formas_de_pago`, `contable_movimientos`, `contable_pagos`, `contable_cotizacion`. No están en `schema_inicial.sql`. La ficha no copia el movimiento: se une por `tabla_origen` + `id_movimiento`. `impacta` nace en true. `moneda` del costo y de cada pago es `ARS` o `USD`. `contable_cotizacion` es una sola fila (`id = 1`, `pesos_por_dolar`). Costo total, abonado y pendiente de la grilla se calculan en pesos. Comprobantes en el bucket privado `contabilidad`.
 
 **Otros:** `usuarios`, `_meta_tablas`
 
 **SQL extra:**
 
 - `supabase/fix_tipos_texto.sql` — tipos text en columnas que lo necesitaron
+- `supabase/proveedores_y_clientes.sql` — **correrlo en la base que ya está en uso** (no reejecutar `schema_inicial.sql`, que borra tablas). Crea `proveedores` y `clientes`, agrega `proveedor` en movimientos de envases/etiquetas/insumos, agrega `cliente` en solicitudes, políticas RLS de desarrollo y permisos de Administrador y Operario. Se puede reejecutar.
+- `supabase/contabilidad.sql` — **correrlo en la base que ya está en uso** (también si ya se corrió antes: agrega `contable_pagos`). Crea `formas_de_pago`, `contable_movimientos` (`impacta`, `moneda`), `contable_pagos` (forma, monto y moneda) y `contable_cotizacion` (pesos por dólar), el bucket privado `contabilidad` y el permiso del módulo (Administrador sí, Operario no). Se puede reejecutar. La ficha se ata con `tabla_origen` + `id_movimiento`.
 - `supabase/politica_lectura_anon_dev.sql` — lectura anon temporal de catálogos (solo dev)
 
 **Regla de negocio clave:** una sola fuente de verdad para **lo producido**: se calcula desde **Producción** cuando el lote coincide. No inventar un stock paralelo.

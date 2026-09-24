@@ -9,8 +9,10 @@ import {
   filaMovimiento,
   KindMovimiento,
   MOVIMIENTOS,
+  tipoClave,
   validarMovimiento,
 } from "@/lib/movimientos/logic";
+import { borrarFichaSiExiste } from "@/lib/contabilidad/ficha";
 import { idEntero } from "@/lib/solicitudes/logic";
 
 async function maxId(tabla: string) {
@@ -45,7 +47,11 @@ export async function guardarMovimiento(
     : admin.from(cfg.tabla).insert(fila);
   const { error } = await q;
   if (error) throw new Error(error.message);
+  if (!cfg.esProducto && tipoClave(datos.tipo) !== "ingreso") {
+    await borrarFichaSiExiste(cfg.tabla, id);
+  }
   revalidatePath("/movimientos");
+  revalidatePath("/contabilidad");
   revalidatePath(`/${kind === "productos" ? "productos" : kind}`);
 }
 
@@ -55,6 +61,8 @@ export async function eliminarMovimiento(kind: KindMovimiento, id: number) {
   const admin = createAdminClient();
   const { error } = await admin.from(cfg.tabla).delete().eq("id", id);
   if (error) throw new Error(error.message);
+  if (!cfg.esProducto) await borrarFichaSiExiste(cfg.tabla, id);
   revalidatePath("/movimientos");
+  revalidatePath("/contabilidad");
   revalidatePath(`/${kind === "productos" ? "productos" : kind}`);
 }

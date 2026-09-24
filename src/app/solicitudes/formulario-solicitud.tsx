@@ -13,15 +13,23 @@ import {
   actualizarSolicitud,
   crearSolicitud,
 } from "@/app/solicitudes/actions";
+import { etiquetaParte, type ParteVista } from "@/lib/terceros/logic";
 
 const PLACEHOLDER_PENDIENTE = "Pendiente";
 
 type Props = {
   productos: ProductoOpcion[];
+  clientes: ParteVista[];
+  errorClientes?: string | null;
   solicitud?: SolicitudVista | null;
 };
 
-export function FormularioSolicitud({ productos, solicitud }: Props) {
+export function FormularioSolicitud({
+  productos,
+  clientes,
+  errorClientes,
+  solicitud,
+}: Props) {
   const router = useRouter();
   const editando = Boolean(solicitud?.id);
   const [pending, startTransition] = useTransition();
@@ -57,6 +65,7 @@ export function FormularioSolicitud({ productos, solicitud }: Props) {
   const [ordenProduccion, setOrdenProduccion] = useState(
     solicitud?.orden_produccion || "",
   );
+  const [cliente, setCliente] = useState(solicitud?.cliente || "");
   const [pallets, setPallets] = useState(
     String(solicitud?.pallets_solicitados || ""),
   );
@@ -130,6 +139,7 @@ export function FormularioSolicitud({ productos, solicitud }: Props) {
       unidades,
       fecha_registro: fechaRegistro,
       fecha_estimada: fechaEstimada,
+      cliente,
     };
 
     startTransition(async () => {
@@ -213,13 +223,36 @@ export function FormularioSolicitud({ productos, solicitud }: Props) {
               required
             />
           </label>
-          <label className="sm:col-span-2">
+          <label>
             <span className="g-label">Orden de producción</span>
             <input
               className={input}
               value={ordenProduccion}
               onChange={(e) => setOrdenProduccion(e.target.value)}
             />
+          </label>
+          <label>
+            <span className="g-label">Cliente</span>
+            <select
+              className={input}
+              value={cliente}
+              onChange={(e) => setCliente(e.target.value)}
+            >
+              <option value="">Sin especificar</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.nombre}>
+                  {etiquetaParte(c)}
+                </option>
+              ))}
+              {cliente && !clientes.some((c) => c.nombre === cliente) ? (
+                <option value={cliente}>{cliente}</option>
+              ) : null}
+            </select>
+            {errorClientes ? (
+              <span className="mt-1 block text-[11px] text-[var(--color-danger)]">
+                No se pudo cargar el listado de clientes.
+              </span>
+            ) : null}
           </label>
         </div>
       </section>

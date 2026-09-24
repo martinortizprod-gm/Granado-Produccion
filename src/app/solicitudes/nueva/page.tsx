@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { getPerfilSesion, puede } from "@/lib/auth/permisos";
 import { cargarDatosSolicitudes } from "@/lib/solicitudes/data";
+import { cargarPartes } from "@/lib/terceros/data";
 import { FormularioSolicitud } from "@/app/solicitudes/formulario-solicitud";
 import { redirect } from "next/navigation";
 
@@ -12,6 +13,7 @@ export default async function NuevaSolicitudPage() {
     redirect("/solicitudes");
   }
   const { productos, error } = await cargarDatosSolicitudes();
+  const clientes = await cargarPartes("clientes");
 
   return (
     <AppShell perfil={perfil} activo="solicitudes">
@@ -20,7 +22,11 @@ export default async function NuevaSolicitudPage() {
           {error}
         </p>
       ) : null}
-      <FormularioSolicitud productos={productos} />
+      <FormularioSolicitud
+        productos={productos}
+        clientes={clientes.items}
+        errorClientes={clientes.error}
+      />
     </AppShell>
   );
 }

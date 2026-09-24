@@ -563,7 +563,9 @@ export function filaMovimiento(
   base.remito = texto(datos.remito) || null;
   if (cfg.categoria) base.categoria = art?.categoria || null;
   if (cfg.gestion) base.gestion = art?.gestion || null;
-  if (cfg.proveedor) base.proveedor = texto(datos.proveedor) || null;
+  if (tipo === "ingreso" || cfg.proveedor) {
+    base.proveedor = texto(datos.proveedor) || null;
+  }
   if (cfg.nombreEnFila) base[cfg.campoNombre] = art?.nombre || null;
   return base;
 }
