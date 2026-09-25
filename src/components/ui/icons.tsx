@@ -208,6 +208,14 @@ export function IconLogout(p: IconProps) {
     </Svg>
   );
 }
+export function IconUser(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="8" r="3.25" />
+      <path d="M5.5 19.2c.7-3.1 3-4.9 6.5-4.9s5.8 1.8 6.5 4.9" />
+    </Svg>
+  );
+}
 export function IconUserPlus(p: IconProps) {
   return (
     <Svg {...p}>

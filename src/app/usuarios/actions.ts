@@ -156,7 +156,10 @@ export async function crearUsuarioApp(input: {
   id_rol: number;
   contacto?: string;
 }) {
-  await requirePermiso("usuarios", "editar");
+  const perfil = await requirePermiso("usuarios", "editar");
+  if (!perfil.esAdministrador) {
+    throw new Error("Solo un administrador puede asignar el rol");
+  }
   const admin = createAdminClient();
   const mail = input.mail.trim().toLowerCase();
   if (!mail || !input.password || input.password.length < 6) {
@@ -217,23 +220,45 @@ export async function actualizarUsuarioApp(input: {
   id_rol: number;
   contacto?: string;
 }) {
-  await requirePermiso("usuarios", "editar");
+  const perfil = await requirePermiso("usuarios", "editar");
   const admin = createAdminClient();
+  const { data: actual, error: errActual } = await admin
+    .from("usuarios")
+    .select("id_rol")
+    .eq("id", input.id)
+    .maybeSingle();
+  if (errActual) throw new Error(errActual.message);
+
+  const cambiaRol = actual?.id_rol !== input.id_rol;
+  if (cambiaRol && !perfil.esAdministrador) {
+    throw new Error("Solo un administrador puede cambiar el rol");
+  }
+
   const { data: roles } = await admin
     .from("roles")
     .select("nombre")
     .eq("id", input.id_rol)
     .maybeSingle();
 
+  const cambios: {
+    nombre: string;
+    apellido: string;
+    contacto: string | null;
+    id_rol?: number;
+    rol?: string;
+  } = {
+    nombre: input.nombre.trim(),
+    apellido: input.apellido.trim(),
+    contacto: input.contacto?.trim() || null,
+  };
+  if (perfil.esAdministrador) {
+    cambios.id_rol = input.id_rol;
+    cambios.rol = roles?.nombre === "Administrador" ? "admin" : "operario";
+  }
+
   const { error } = await admin
     .from("usuarios")
-    .update({
-      nombre: input.nombre.trim(),
-      apellido: input.apellido.trim(),
-      id_rol: input.id_rol,
-      contacto: input.contacto?.trim() || null,
-      rol: roles?.nombre === "Administrador" ? "admin" : "operario",
-    })
+    .update(cambios)
     .eq("id", input.id);
   if (error) throw new Error(error.message);
   revalidatePath("/usuarios");

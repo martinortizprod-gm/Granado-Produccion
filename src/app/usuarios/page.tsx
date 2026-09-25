@@ -42,6 +42,7 @@ export default async function UsuariosPage() {
           roles={roles}
           usuarios={usuarios}
           puedeEditar={puede(perfil, "usuarios", "editar")}
+          puedeAsignarRol={perfil.esAdministrador}
         />
       )}
     </AppShell>

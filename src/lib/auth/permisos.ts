@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AccionPermiso, ModuloId, PermisoModulo } from "@/lib/modulos";
+import { urlFotoPerfil } from "@/lib/auth/foto-perfil";
 import { PerfilSesion, puede } from "@/lib/auth/permisos-core";
 
 export type { PerfilSesion } from "@/lib/auth/permisos-core";
@@ -15,6 +16,10 @@ export async function getPerfilSesion(): Promise<PerfilSesion | null> {
   if (!user?.email) return null;
 
   const email = user.email;
+  const fotoUrl = urlFotoPerfil(
+    user.user_metadata?.avatar_path,
+    user.user_metadata?.avatar_v,
+  );
   const base: PerfilSesion = {
     authUserId: user.id,
     email,
@@ -25,6 +30,7 @@ export async function getPerfilSesion(): Promise<PerfilSesion | null> {
     idRol: null,
     esAdministrador: false,
     permisos: [],
+    fotoUrl,
   };
 
   let admin;
@@ -34,11 +40,22 @@ export async function getPerfilSesion(): Promise<PerfilSesion | null> {
     return base;
   }
 
-  const { data: fila, error: errUser } = await admin
+  const columnas = "id, nombre, apellido, rol, id_rol, auth_user_id, mail";
+  let { data: fila, error: errUser } = await admin
     .from("usuarios")
-    .select("id, nombre, apellido, rol, id_rol, auth_user_id, mail")
-    .ilike("mail", email)
+    .select(columnas)
+    .eq("auth_user_id", user.id)
     .maybeSingle();
+
+  if (!errUser && !fila) {
+    const porMail = await admin
+      .from("usuarios")
+      .select(columnas)
+      .ilike("mail", email)
+      .maybeSingle();
+    fila = porMail.data;
+    errUser = porMail.error;
+  }
 
   if (errUser) {
     // Tablas/roles aún no migrados
@@ -106,6 +123,7 @@ export async function getPerfilSesion(): Promise<PerfilSesion | null> {
     idRol,
     esAdministrador,
     permisos,
+    fotoUrl,
   };
 }
 

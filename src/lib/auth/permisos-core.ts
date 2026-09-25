@@ -14,6 +14,7 @@ export type PerfilSesion = {
   idRol: number | null;
   esAdministrador: boolean;
   permisos: PermisoModulo[];
+  fotoUrl: string | null;
 };
 
 export function puede(

@@ -50,7 +50,7 @@ export function AppShell({
   children,
 }: {
   perfil: PerfilSesion;
-  activo: ModuloId;
+  activo?: ModuloId;
   children: React.ReactNode;
 }) {
   const visibles = MODULOS.filter((m) => puede(perfil, m.id, "ver"));
@@ -73,6 +73,8 @@ export function AppShell({
     leerSidebarServidor,
   );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [fotoRota, setFotoRota] = useState<string | null>(null);
+  const mostrarFoto = Boolean(perfil.fotoUrl) && fotoRota !== perfil.fotoUrl;
 
   function toggleDesktop() {
     window.localStorage.setItem(SIDEBAR_KEY, desktopOpen ? "0" : "1");
@@ -226,13 +228,27 @@ export function AppShell({
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
-            <div className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1">
-              <span
-                className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white"
-                style={{ background: "var(--color-primary)" }}
-              >
-                {ini}
-              </span>
+            <Link
+              href="/perfil"
+              title="Mi perfil"
+              aria-label={`Mi perfil, ${nombre}`}
+              className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 hover:bg-[var(--color-surface-secondary)]"
+            >
+              {mostrarFoto ? (
+                <img
+                  src={perfil.fotoUrl!}
+                  alt=""
+                  className="h-7 w-7 rounded-full object-cover"
+                  onError={() => setFotoRota(perfil.fotoUrl)}
+                />
+              ) : (
+                <span
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                  style={{ background: "var(--color-primary)" }}
+                >
+                  {ini}
+                </span>
+              )}
               <div className="hidden min-w-0 pr-1 sm:block">
                 <p className="truncate text-[12.5px] leading-tight font-semibold">
                   {nombre}
@@ -241,7 +257,7 @@ export function AppShell({
                   {perfil.rolNombre ?? "Sin rol"}
                 </p>
               </div>
-            </div>
+            </Link>
             <LogoutButton />
           </div>
         </header>

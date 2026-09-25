@@ -44,6 +44,7 @@ type Props = {
   roles: Rol[];
   usuarios: Usuario[];
   puedeEditar: boolean;
+  puedeAsignarRol: boolean;
 };
 
 function permisosVacios(): RolPermisoInput[] {
@@ -76,7 +77,12 @@ const COLS_USUARIOS = [
   { id: "acciones", label: "Acciones", locked: true },
 ];
 
-export function UsuariosClient({ roles, usuarios, puedeEditar }: Props) {
+export function UsuariosClient({
+  roles,
+  usuarios,
+  puedeEditar,
+  puedeAsignarRol,
+}: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<"usuarios" | "roles">("usuarios");
   const [pending, startTransition] = useTransition();
@@ -364,6 +370,7 @@ export function UsuariosClient({ roles, usuarios, puedeEditar }: Props) {
                       setURol(e.target.value ? Number(e.target.value) : "")
                     }
                     required
+                    disabled={!puedeEditar || !puedeAsignarRol}
                   >
                     <option value="">Elegir…</option>
                     {roles.map((r) => (

@@ -153,7 +153,7 @@ Archivos clave de infra:
 | `src/lib/auth/permisos.ts` | `getPerfilSesion`, `requirePermiso` |
 | `src/lib/auth/permisos-core.ts` | `puede()`, tipo `PerfilSesion` |
 | `src/lib/modulos.ts` | Lista de módulos + grupos del menú |
-| `src/components/app-shell.tsx` | Sidebar, header, filtro de menú por permiso |
+| `src/components/app-shell.tsx` | Sidebar, header, filtro de menú por permiso. El círculo del usuario (foto o iniciales) abre `/perfil`. |
 
 ---
 
@@ -165,14 +165,23 @@ Archivos clave de infra:
 
 **Logout:** `src/app/logout/actions.ts` → `/login`.
 
+**Mi perfil:** `/perfil` (no es un módulo ni pide permiso; cualquier usuario logueado). UI: `src/app/perfil/page.tsx` + `perfil-client.tsx`. Actions: `guardarMiPerfil`, `cambiarMiClave`, `guardarMiFoto`, `quitarMiFoto`. Lectura extra (contacto, fecha): `src/lib/auth/mi-perfil.ts`.
+
+- Edita su fila de `usuarios`: nombre, apellido, mail y contacto. Si cambia el mail, también se actualiza el email de Auth (`email_confirm: true`); es el correo de ingreso.
+- Rol y fecha de registro se muestran deshabilitados. El rol no se cambia en esta pantalla, ni siendo administrador.
+- Solo el rol **Administrador** (`esAdministrador`) puede asignar o cambiar el rol de cualquier usuario, en `/usuarios` (`crearUsuarioApp` / `actualizarUsuarioApp`). Quien tenga permiso de editar Usuarios pero no sea Administrador no asigna rol.
+- Contraseña: primero `signInWithPassword` con la actual. Si no coincide, no se cambia. Si coincide, `updateUserById` y un nuevo ingreso con la contraseña nueva. Mínimo 6 caracteres. No usa `usuarios.clave`.
+- Foto: JPG, PNG o WEBP, hasta 2 MB. Bucket público `perfiles` (`supabase/perfil.sql`, hay que correrlo en la base en uso). Ruta `{authUserId}/avatar.ext` en `user_metadata` (`avatar_path`, `avatar_v`). Sin columna nueva. `getPerfilSesion` arma `fotoUrl` (`src/lib/auth/foto-perfil.ts`) para el encabezado.
+
 **Perfil (`getPerfilSesion`):**
 
 1. Email de Auth.
-2. Fila en `usuarios` por `mail` (sin importar mayúsculas).
+2. Fila en `usuarios` por `auth_user_id`. Si no hay, por `mail` (sin importar mayúsculas).
 3. Si falta `auth_user_id`, lo vincula al UUID de Auth.
 4. Rol: `id_rol` → tabla `roles`. Fallback: `usuarios.rol = 'admin'`.
 5. Permisos: filas de `rol_permisos` para ese rol.
 6. Si es Administrador, todos los permisos quedan en `true`.
+7. `fotoUrl` sale de `user_metadata.avatar_path` (bucket `perfiles`), o null.
 
 **Tablas de permisos** (`supabase/roles_y_permisos.sql`):
 
@@ -222,7 +231,7 @@ Definidos en `src/lib/modulos.ts`. Grupos del menú (solo visual): Operación, M
 | Recetas | `/recetas` | Versiones (`registro_versiones`) y líneas (`recetas`) por producto. |
 | Data Analytics | `/analytics` | Tabs: producción, stock, trazabilidad, reportes. |
 | Contabilidad | `/contabilidad` | Cuatro solapas (ingredientes, envases, etiquetas, insumos). Cada una lista los ingresos de ese tipo, abre en el mes en curso y, por defecto, solo los que **impactan**. No impacta pone los costos en cero (artículos de clientes que no se pagan). Costos y pagos llevan moneda ARS o USD. La cotización (pesos por dólar) vive en `contable_cotizacion` y los totales de la grilla se muestran en pesos. Eliminar la ficha no borra el movimiento. |
-| Usuarios | `/usuarios` | Roles, permisos, altas. Crea user en Auth + fila `usuarios`. Service role. |
+| Usuarios | `/usuarios` | Roles, permisos, altas. Crea user en Auth + fila `usuarios`. Service role. Asignar o cambiar el rol de un usuario solo lo puede el rol Administrador. |
 | Respaldos | `/respaldos` | Export xlsx / pdf / sql / json (`POST /api/respaldos`). |
 
 **Informes (detalle):**
@@ -246,7 +255,8 @@ Casi todas las pages son Server Components con `dynamic = "force-dynamic"` y un 
 - contabilidad: `guardarContable`, `eliminarContable`, `marcarImpacto`, `actualizarDolar`, `abrirComprobante`
 - planificacion: `generarMes`, `recalcularMes`, `guardarDia`, `alternarContempla`, `asignarCategoria`, `eliminarDia`, `guardarRendimientos`, `guardarCapacidades`, `guardarHorarios`, `guardarParadas`
 - produccion: `registrarJornada`, `eliminarJornada`, `guardarPrevios`, `agregarCatalogoPrevio`
-- usuarios: `listarRoles`, `listarPermisosRol`, `guardarRol`, `eliminarRol`, `listarUsuariosApp`, `crearUsuarioApp`, `actualizarUsuarioApp`
+- usuarios: `listarRoles`, `listarPermisosRol`, `guardarRol`, `eliminarRol`, `listarUsuariosApp`, `crearUsuarioApp`, `actualizarUsuarioApp` (el rol solo si `esAdministrador`)
+- perfil (`src/app/perfil/actions.ts`, no es módulo): `guardarMiPerfil`, `cambiarMiClave`, `guardarMiFoto`, `quitarMiFoto`
 
 Antes de inventar una action, buscar si ya existe.
 
@@ -280,6 +290,7 @@ Esquema: `supabase/schema_inicial.sql` (32 tablas, incluidas `proveedores` y `cl
 - `supabase/proveedores_y_clientes.sql` — **correrlo en la base que ya está en uso** (no reejecutar `schema_inicial.sql`, que borra tablas). Crea `proveedores` y `clientes`, agrega `proveedor` en movimientos de envases/etiquetas/insumos, agrega `cliente` en solicitudes, políticas RLS de desarrollo y permisos de Administrador y Operario. Se puede reejecutar.
 - `supabase/contabilidad.sql` — **correrlo en la base que ya está en uso** (también si ya se corrió antes: agrega `contable_pagos`). Crea `formas_de_pago`, `contable_movimientos` (`impacta`, `moneda`), `contable_pagos` (forma, monto y moneda) y `contable_cotizacion` (pesos por dólar), el bucket privado `contabilidad` y el permiso del módulo (Administrador sí, Operario no). Se puede reejecutar. La ficha se ata con `tabla_origen` + `id_movimiento`.
 - `supabase/politica_lectura_anon_dev.sql` — lectura anon temporal de catálogos (solo dev)
+- `supabase/perfil.sql` — **correrlo en la base que ya está en uso**. Crea el bucket público `perfiles` para la foto del usuario logueado. No agrega columnas. Se puede reejecutar.
 
 **Regla de negocio clave:** una sola fuente de verdad para **lo producido**: se calcula desde **Producción** cuando el lote coincide. No inventar un stock paralelo.
 
