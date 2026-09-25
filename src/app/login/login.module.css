@@ -1,0 +1,24 @@
+.marca {
+  background: var(--color-primary);
+}
+
+.titulo {
+  color: var(--color-primary);
+}
+
+:global(html.oscuro) .marca {
+  background: var(--color-accent-bar);
+}
+
+:global(html.oscuro) .titulo {
+  color: var(--color-accent-bar);
+}
+
+.panel {
+  background: #01251c;
+}
+
+.foto {
+  object-fit: contain;
+  object-position: center bottom;
+}

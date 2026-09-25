@@ -98,6 +98,7 @@ Py-Produccion/
 ├── scripts/                 # Migración SQLite → Supabase (Python)
 ├── docs/                    # UI_DESIGN_SYSTEM.md + mockups de referencia visual
 ├── public/brand/            # Logo fábrica granado-icon.png
+├── public/login/            # Fondo del Login (Fondo-login02.png)
 ├── .cursor/rules/           # Rules del agente
 ├── .cursor/CONTEXTO-PROYECTO.md   # Este archivo
 ├── .env.example             # Plantilla de env (no secretos)
@@ -298,7 +299,7 @@ Fuente visual: `docs/UI_DESIGN_SYSTEM.md`. Tokens y clases: `src/app/globals.css
 - Controles ~36px; gaps 8/12/16; `.g-stack` entre bloques.
 - Tablas: `.g-table-wrap` + `.g-table-scroll` + `.g-table` + header sticky. `ColumnPicker` + `useColumnVisibility`. Detalle: `RowDetailButton` / `RecordDetailDrawer` **solo con campos reales**.
 - Filtros: `.g-filters`. En PC (≥1024px) una fila; en tablet/móvil, apilados.
-- Login: layout partido, card chica. Sin AppShell.
+- Login: sin AppShell. Desde `lg` (≥1024 px) el formulario queda a la izquierda (~40 %, tope 520 px) y la imagen industrial a la derecha (`public/login/Fondo-login02.png`, origen `docs/img/Fondo-login02.png`). Se muestra entera (`object-fit: contain`, apoyada abajo); el verde de arriba es el cielo de la foto. En tablet chica y móvil solo el formulario. Estilos locales en `src/app/login/login.module.css`. Sin animación ni SVG. Auth igual: `signInWithPassword`. No hay “recordar sesión”, “olvidé contraseña” ni nota de Supabase en la pantalla.
 - Resto de pantallas autenticadas: envolver con `AppShell`.
 
 Mockups en `docs/` (ventanas, imgs) = **referencia visual**, no especificación de pantallas ni de datos.
