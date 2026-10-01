@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import {
   IconBolt,
@@ -25,7 +26,7 @@ import { fechaVisible } from "@/lib/solicitudes/logic";
 import { hoyIso } from "@/lib/planificacion/logic";
 import {
   CUMPLE_PLAN,
-  PRESETS,
+  PRESET_PERSONALIZADO,
   deltaPct,
   etiquetaPeriodo,
   filtrarJornadas,
@@ -33,16 +34,15 @@ import {
   fmtKg,
   fmtKgH,
   fmtPct,
+  mesesPeriodo,
   opcionesFiltro,
   productosDeCategoria,
   rangoAnterior,
   rangoDePunto,
-  rangoPreset,
   resumenAnalytics,
   resumenPlan,
   type JornadaAnalytics,
   type LineaPlanAnalytics,
-  type PresetAnalytics,
   type ResumenAnalytics,
 } from "@/lib/analytics/logic";
 import {
@@ -83,15 +83,19 @@ const COLS = [
 const PAGE = 50;
 
 export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
-  const [preset, setPreset] = useState<PresetAnalytics>("Mes actual");
-  const [desde, setDesde] = useState(() => rangoPreset("Mes actual")?.desde ?? hoyIso());
-  const [hasta, setHasta] = useState(() => rangoPreset("Mes actual")?.hasta ?? hoyIso());
+  const meses = useMemo(() => mesesPeriodo(), []);
+  const mesActual = meses[meses.length - 1];
+  const [preset, setPreset] = useState(mesActual?.clave ?? PRESET_PERSONALIZADO);
+  const [desde, setDesde] = useState(() => mesActual?.desde ?? hoyIso());
+  const [hasta, setHasta] = useState(() => mesActual?.hasta ?? hoyIso());
+  const desdeRef = useRef<HTMLInputElement>(null);
   const [categoria, setCategoria] = useState("Todos");
   const [producto, setProducto] = useState("Todos");
   const [envase, setEnvase] = useState("Todos");
   const [causa, setCausa] = useState<{ nombre: string; tipo: "prog" | "no" } | null>(null);
   const [tab, setTab] = useState<"produccion" | "stock" | "trazabilidad" | "reportes">("produccion");
   const [familia, setFamilia] = useState<FamiliaStock>("Todas");
+  const [articulo, setArticulo] = useState("Todos");
   const [exportar, setExportar] = useState(false);
   const [comparar, setComparar] = useState(true);
   const [seleccionId, setSeleccionId] = useState<number | null>(null);
@@ -141,6 +145,7 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
             envase,
             causa,
             familia,
+            articulo,
             comparar,
             resumen,
             plan: planActual,
@@ -148,7 +153,7 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
             stock,
           })
         : null,
-    [tab, desde, hasta, categoria, producto, envase, causa, familia, comparar, resumen, planActual, resumenAnt, stock],
+    [tab, desde, hasta, categoria, producto, envase, causa, familia, articulo, comparar, resumen, planActual, resumenAnt, stock],
   );
 
   const seleccion = resumen?.detalle.find((j) => j.id === seleccionId) ?? null;
@@ -156,18 +161,29 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
   const paginaSafe = Math.min(pagina, totalPaginas - 1);
   const filas = resumen?.detalle.slice(paginaSafe * PAGE, paginaSafe * PAGE + PAGE) ?? [];
 
-  function aplicarPreset(valor: PresetAnalytics) {
-    setPreset(valor);
-    const rango = rangoPreset(valor);
-    if (!rango) return;
-    setDesde(rango.desde);
-    setHasta(rango.hasta);
+  function aplicarMes(clave: string) {
+    const mes = meses.find((item) => item.clave === clave);
+    if (!mes) return;
+    setPreset(mes.clave);
+    setDesde(mes.desde);
+    setHasta(mes.hasta);
     setPagina(0);
     setSeleccionId(null);
   }
 
+  function abrirPersonalizado() {
+    flushSync(() => setPreset(PRESET_PERSONALIZADO));
+    const campo = desdeRef.current;
+    campo?.focus();
+    try {
+      campo?.showPicker();
+    } catch {
+      /* el calendario queda en el campo Desde */
+    }
+  }
+
   function cambiarFecha(campo: "desde" | "hasta", valor: string) {
-    setPreset("Personalizado");
+    setPreset(PRESET_PERSONALIZADO);
     if (campo === "desde") setDesde(valor);
     else setHasta(valor);
     setPagina(0);
@@ -199,7 +215,7 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
     if (!desde || !hasta || errorFechas) return;
     const modo = resumen?.modoSerie ?? "dia";
     const rango = rangoDePunto(fecha, modo, desde, hasta);
-    setPreset("Personalizado");
+    setPreset(PRESET_PERSONALIZADO);
     setDesde(rango.desde);
     setHasta(rango.hasta);
     setPagina(0);
@@ -318,37 +334,58 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
         <>
       <div className="g-card px-3 py-2.5">
         <span className="g-label">Período</span>
-        <div className="mt-1 flex flex-wrap gap-1">
-          {PRESETS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={`g-btn g-btn-sm ${preset === item ? "g-btn-primary" : "g-btn-secondary"}`}
-              onClick={() => aplicarPreset(item)}
-            >
-              {item}
-            </button>
-          ))}
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          {meses.map((mes, indice) => {
+            const muestraAnio = indice === 0 || mes.anio !== meses[indice - 1].anio;
+            return (
+              <span key={mes.clave} className="inline-flex items-center gap-1">
+                {muestraAnio ? (
+                  <span className="inline-flex h-[30px] items-center rounded-[5px] bg-[var(--color-primary)] px-2 text-[12px] font-semibold text-white">
+                    {mes.anio}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  className={`g-btn g-btn-sm ${preset === mes.clave ? "g-btn-primary" : "g-btn-secondary"}`}
+                  onClick={() => aplicarMes(mes.clave)}
+                >
+                  {mes.etiqueta}
+                </button>
+              </span>
+            );
+          })}
+          <button
+            type="button"
+            className={`g-btn g-btn-sm ${preset === PRESET_PERSONALIZADO ? "g-btn-primary" : "g-btn-secondary"}`}
+            onClick={abrirPersonalizado}
+          >
+            Personalizado
+          </button>
         </div>
+        {preset === PRESET_PERSONALIZADO ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <label className="w-44">
+              <span className="g-label">Desde</span>
+              <input
+                ref={desdeRef}
+                type="date"
+                className="g-input"
+                value={desde}
+                onChange={(e) => cambiarFecha("desde", e.target.value)}
+              />
+            </label>
+            <label className="w-44">
+              <span className="g-label">Hasta</span>
+              <input
+                type="date"
+                className="g-input"
+                value={hasta}
+                onChange={(e) => cambiarFecha("hasta", e.target.value)}
+              />
+            </label>
+          </div>
+        ) : null}
         <div className="g-filters mt-2">
-          <label>
-            <span className="g-label">Desde</span>
-            <input
-              type="date"
-              className="g-input"
-              value={desde}
-              onChange={(e) => cambiarFecha("desde", e.target.value)}
-            />
-          </label>
-          <label>
-            <span className="g-label">Hasta</span>
-            <input
-              type="date"
-              className="g-input"
-              value={hasta}
-              onChange={(e) => cambiarFecha("hasta", e.target.value)}
-            />
-          </label>
           <label>
             <span className="g-label">Categoría</span>
             <select
@@ -421,8 +458,13 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
           hasta={hasta}
           categoria={categoria}
           producto={producto}
+          articulo={articulo}
           familia={familia}
-          onFamilia={setFamilia}
+          onFamilia={(valor) => {
+            setFamilia(valor);
+            setArticulo("Todos");
+          }}
+          onArticulo={setArticulo}
         />
       ) : tab === "stock" ? (
         <p className="text-[13px] text-[var(--color-text-muted)]">

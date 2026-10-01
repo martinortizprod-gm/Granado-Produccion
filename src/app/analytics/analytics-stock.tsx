@@ -28,8 +28,10 @@ type Props = {
   hasta: string;
   categoria: string;
   producto: string;
+  articulo: string;
   familia: FamiliaStock;
   onFamilia: (valor: FamiliaStock) => void;
+  onArticulo: (valor: string) => void;
 };
 
 function fmtCant(valor: number, unidad: string) {
@@ -48,12 +50,24 @@ export function AnalyticsStock({
   hasta,
   categoria,
   producto,
+  articulo,
   familia,
   onFamilia,
+  onArticulo,
 }: Props) {
+  const opcionesArticulo = useMemo(() => {
+    if (familia === "Todas") return [];
+    const grupo = datos.articulos.find((item) => item.familia === familia);
+    const nombres = new Set<string>();
+    for (const item of grupo?.items ?? []) {
+      const nombre = item.nombre || item.codigo;
+      if (nombre) nombres.add(nombre);
+    }
+    return [...nombres].sort((a, b) => a.localeCompare(b, "es"));
+  }, [datos, familia]);
   const resumen = useMemo(
-    () => resumenStock(datos, { desde, hasta, familia, categoria, producto }),
-    [datos, desde, hasta, familia, categoria, producto],
+    () => resumenStock(datos, { desde, hasta, familia, categoria, producto, articulo }),
+    [datos, desde, hasta, familia, categoria, producto, articulo],
   );
   const familiaKpi: KindCatalogo = familia === "Todas" ? "ingredientes" : familia;
   const unidad = CATALOGOS[familiaKpi].unidad;
@@ -62,22 +76,36 @@ export function AnalyticsStock({
   return (
     <div className="g-stack">
       <div className="g-card px-3 py-2.5">
-        <label>
-          <span className="g-label">Familia</span>
-          <select
-            className="g-input max-w-xs"
-            value={familia}
-            onChange={(e) => onFamilia(e.target.value as FamiliaStock)}
-          >
-            {FAMILIAS_STOCK.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="w-full max-w-xs">
+            <span className="g-label">Familia</span>
+            <select
+              className="g-input"
+              value={familia}
+              onChange={(e) => onFamilia(e.target.value as FamiliaStock)}
+            >
+              {FAMILIAS_STOCK.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {familia !== "Todas" ? (
+            <label className="w-full max-w-xs">
+              <span className="g-label">{CATALOGOS[familia].etiquetaItem}</span>
+              <select className="g-input" value={articulo} onChange={(e) => onArticulo(e.target.value)}>
+                <option>Todos</option>
+                {opcionesArticulo.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
         <p className="mt-2 text-[12px] text-[var(--color-text-muted)]">
           El stock y los vencimientos son el estado actual. Consumo, movimientos y barridos respetan el período
+          {familia !== "Todas" ? `, el ${CATALOGOS[familia].etiquetaItem.toLowerCase()}` : ""}
           {categoria !== "Todos" || producto !== "Todos" ? " y el recorte de producto/categoría" : ""}.
         </p>
       </div>

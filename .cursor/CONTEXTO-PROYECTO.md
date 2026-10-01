@@ -113,6 +113,7 @@ Py-Produccion/
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (solo servidor; en Vercel sin `NEXT_PUBLIC_`)
+- `GEMINI_API_KEY` (solo servidor; Consultas IA. Opcional `GEMINI_MODEL`, por defecto `gemini-3.5-flash-lite`; si está saturado prueba otros Flash)
 
 `.gitignore` ignora `.env*` y `/Obsoleto/` (por si reaparece la carpeta).
 
@@ -230,6 +231,7 @@ Definidos en `src/lib/modulos.ts`. Grupos del menú (solo visual): Operación, M
 | Productos | `/productos` | Productos terminados, stock (movimientos + cierres), vínculo envase/etiqueta. |
 | Recetas | `/recetas` | Versiones (`registro_versiones`) y líneas (`recetas`) por producto. |
 | Data Analytics | `/analytics` | Tabs: producción, stock, trazabilidad, reportes. |
+| Consultas IA | `/consultas-ia` | Prueba con Gemini (solo lectura). Preguntas de stock al día, movimientos, consumos, producción, planificación, horas, causas de paradas, solicitudes y lotes. Menú Análisis, y un botón flotante en el resto de las pantallas (quien tenga permiso de ver). El Administrador entra sin correr SQL; `supabase/consultas_ia.sql` deja el permiso guardado. |
 | Contabilidad | `/contabilidad` | Cuatro solapas (ingredientes, envases, etiquetas, insumos). Cada una lista los ingresos de ese tipo, abre en el mes en curso y, por defecto, solo los que **impactan**. No impacta pone los costos en cero (artículos de clientes que no se pagan). Costos y pagos llevan moneda ARS o USD. La cotización (pesos por dólar) vive en `contable_cotizacion` y los totales de la grilla se muestran en pesos. Eliminar la ficha no borra el movimiento. |
 | Usuarios | `/usuarios` | Roles, permisos, altas. Crea user en Auth + fila `usuarios`. Service role. Asignar o cambiar el rol de un usuario solo lo puede el rol Administrador. |
 | Respaldos | `/respaldos` | Export xlsx / pdf / sql / json (`POST /api/respaldos`). |
@@ -257,6 +259,7 @@ Casi todas las pages son Server Components con `dynamic = "force-dynamic"` y un 
 - produccion: `registrarJornada`, `eliminarJornada`, `guardarPrevios`, `agregarCatalogoPrevio`
 - usuarios: `listarRoles`, `listarPermisosRol`, `guardarRol`, `eliminarRol`, `listarUsuariosApp`, `crearUsuarioApp`, `actualizarUsuarioApp` (el rol solo si `esAdministrador`)
 - perfil (`src/app/perfil/actions.ts`, no es módulo): `guardarMiPerfil`, `cambiarMiClave`, `guardarMiFoto`, `quitarMiFoto`
+- consultas-ia: `consultarConsumo` (solo lectura; llama a Gemini y suma `consumo`)
 
 Antes de inventar una action, buscar si ya existe.
 

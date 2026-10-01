@@ -14,6 +14,7 @@ export const MODULOS = [
   { id: "produccion", label: "Producción", href: "/produccion" },
   { id: "informes", label: "Informes", href: "/informes" },
   { id: "analytics", label: "Data Analytics", href: "/analytics" },
+  { id: "consultas-ia", label: "Consultas IA", href: "/consultas-ia" },
   { id: "contabilidad", label: "Contabilidad", href: "/contabilidad" },
   { id: "usuarios", label: "Usuarios", href: "/usuarios" },
   { id: "respaldos", label: "Respaldos", href: "/respaldos" },
@@ -53,7 +54,7 @@ export const GRUPOS_NAV: { id: string; label: string; modulos: ModuloId[] }[] =
     {
       id: "analisis",
       label: "Análisis",
-      modulos: ["analytics"],
+      modulos: ["analytics", "consultas-ia"],
     },
     {
       id: "contabilidad",

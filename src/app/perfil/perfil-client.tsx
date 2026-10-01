@@ -72,7 +72,12 @@ export function PerfilClient({
         alFinal?.();
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "No se pudo guardar");
+        const mensaje = err instanceof Error ? err.message : "";
+        setError(
+          mensaje && !mensaje.includes("Minified React error")
+            ? mensaje
+            : "No se pudo guardar",
+        );
       }
     });
   }
@@ -94,14 +99,18 @@ export function PerfilClient({
     setOk(null);
     startTransition(async () => {
       try {
-        const aviso = await cambiarMiClave({ actual, nueva, repetir });
-        setOk(aviso ?? "Contraseña actualizada");
+        const resultado = await cambiarMiClave({ actual, nueva, repetir });
+        if (!resultado.ok) {
+          setError(resultado.error);
+          return;
+        }
+        setOk(resultado.aviso ?? "Contraseña actualizada");
         setActual("");
         setNueva("");
         setRepetir("");
         router.refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "No se pudo guardar");
+      } catch {
+        setError("No se pudo cambiar la contraseña");
       }
     });
   }

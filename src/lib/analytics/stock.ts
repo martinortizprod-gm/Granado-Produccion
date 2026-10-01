@@ -294,6 +294,10 @@ function coincideSolicitud(item: { producto: string; categoria: string }, catego
   return true;
 }
 
+function coincideArticulo(nombre: string, articulo: string) {
+  return articulo === "Todos" || nombre === articulo;
+}
+
 export function resumenStock(
   datos: DatosStockAnalytics,
   opts: {
@@ -302,15 +306,19 @@ export function resumenStock(
     familia: FamiliaStock;
     categoria: string;
     producto: string;
+    articulo?: string;
     hoy?: string;
   },
 ): ResumenStock {
   const hoy = opts.hoy ?? hoyIso();
+  const articulo = opts.articulo || "Todos";
   const limite = sumarDias(hoy, DIAS_VENCIMIENTO);
   const familiaKpi: KindCatalogo = opts.familia === "Todas" ? "ingredientes" : opts.familia;
   const cfg = CATALOGOS[familiaKpi];
   const grupo = datos.articulos.find((g) => g.familia === familiaKpi);
-  const activos = (grupo?.items ?? []).filter((item) => item.estado === ESTADO_ACTIVO);
+  const activos = (grupo?.items ?? []).filter(
+    (item) => item.estado === ESTADO_ACTIVO && coincideArticulo(item.nombre || item.codigo, articulo),
+  );
 
   const vencimientos: LoteAlerta[] = [];
   const origenLotes =
@@ -318,6 +326,7 @@ export function resumenStock(
   for (const grupoArt of origenLotes) {
     for (const item of grupoArt.items) {
       if (item.estado !== ESTADO_ACTIVO) continue;
+      if (!coincideArticulo(item.nombre || item.codigo, articulo)) continue;
       for (const lote of item.lotes) {
         const vence = aFecha(lote.vencimiento);
         if (!vence) continue;
@@ -348,7 +357,7 @@ export function resumenStock(
   const movs = datos.movimientos.filter((item) => {
     if (!enPeriodo(item.fecha, opts.desde, opts.hasta)) return false;
     if (opts.familia !== "Todas" && item.familia !== opts.familia) return false;
-    return true;
+    return coincideArticulo(item.articulo, articulo);
   });
   const movKpi = movs.filter((item) => item.familia === familiaKpi);
   const ingresos = movKpi.filter((i) => i.tipo === "ingreso").reduce((s, i) => s + i.cantidad, 0);
@@ -364,6 +373,7 @@ export function resumenStock(
   const consumos = datos.consumos.filter((item) => {
     if (!enPeriodo(item.fecha, opts.desde, opts.hasta)) return false;
     if (opts.familia !== "Todas" && item.familia !== opts.familia) return false;
+    if (!coincideArticulo(item.articulo, articulo)) return false;
     return coincideSolicitud(item, opts.categoria, opts.producto);
   });
   const consumoKpi = consumos
@@ -375,6 +385,7 @@ export function resumenStock(
   }
 
   const barridos = datos.barridos.filter((item) => {
+    if (opts.familia === "ingredientes" && !coincideArticulo(item.ingrediente, articulo)) return false;
     if (!coincideSolicitud(item, opts.categoria, opts.producto)) return false;
     if (item.fechas.some((f) => enPeriodo(f, opts.desde, opts.hasta))) return true;
     if (item.fechas.length === 0) return enPeriodo(item.fechaSolicitud, opts.desde, opts.hasta);

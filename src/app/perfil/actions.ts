@@ -1,5 +1,6 @@
 "use server";
 
+import { createClient as createAnon } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -96,38 +97,59 @@ export async function cambiarMiClave(input: {
   actual: string;
   nueva: string;
   repetir: string;
-}) {
+}): Promise<{ ok: true; aviso: string | null } | { ok: false; error: string }> {
   const actual = input.actual;
   const nueva = input.nueva;
-  if (!actual) throw new Error("Ingresá la contraseña actual");
+  if (!actual) return { ok: false, error: "Ingresá la contraseña actual" };
   if (nueva.length < 6) {
-    throw new Error("La contraseña nueva tiene que tener al menos 6 caracteres");
+    return {
+      ok: false,
+      error: "La contraseña nueva tiene que tener al menos 6 caracteres",
+    };
   }
   if (nueva !== input.repetir) {
-    throw new Error("La contraseña nueva y la repetición no coinciden");
+    return { ok: false, error: "La contraseña nueva y la repetición no coinciden" };
   }
 
-  const { supabase, user } = await sesion();
-  const { error: loginError } = await supabase.auth.signInWithPassword({
-    email: user.email!,
-    password: actual,
-  });
-  if (loginError) throw new Error("La contraseña actual no es correcta");
+  try {
+    const { supabase, user } = await sesion();
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) {
+      return { ok: false, error: "No se pudo verificar la contraseña" };
+    }
 
-  const admin = createAdminClient();
-  const { error } = await admin.auth.admin.updateUserById(user.id, {
-    password: nueva,
-  });
-  if (error) throw new Error(error.message);
+    const anon = createAnon(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { error: loginError } = await anon.auth.signInWithPassword({
+      email: user.email!,
+      password: actual,
+    });
+    if (loginError) {
+      return { ok: false, error: "La contraseña actual no es correcta" };
+    }
 
-  const { error: reingreso } = await supabase.auth.signInWithPassword({
-    email: user.email!,
-    password: nueva,
-  });
-  if (reingreso) {
-    return "La contraseña se cambió. Si te pide entrar de nuevo, usá la nueva.";
+    const admin = createAdminClient();
+    const { error } = await admin.auth.admin.updateUserById(user.id, {
+      password: nueva,
+    });
+    if (error) return { ok: false, error: "No se pudo cambiar la contraseña" };
+
+    const { error: reingreso } = await supabase.auth.signInWithPassword({
+      email: user.email!,
+      password: nueva,
+    });
+    if (reingreso) {
+      return {
+        ok: true,
+        aviso: "La contraseña se cambió. Si te pide entrar de nuevo, usá la nueva.",
+      };
+    }
+    return { ok: true, aviso: null };
+  } catch {
+    return { ok: false, error: "No se pudo cambiar la contraseña" };
   }
-  return null;
 }
 
 async function metadatosActuales(

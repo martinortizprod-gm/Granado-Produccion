@@ -13,6 +13,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GRUPOS_NAV, MODULOS, type ModuloId } from "@/lib/modulos";
 import { type PerfilSesion, puede } from "@/lib/auth/permisos-core";
+import { ConsultasIaFlotante } from "@/components/consultas-ia-flotante";
 import { registrarUsuarioInforme } from "@/lib/informes/emision";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
@@ -271,6 +272,9 @@ export function AppShell({
           {children}
         </main>
       </div>
+      {puede(perfil, "consultas-ia", "ver") && activo !== "consultas-ia" ? (
+        <ConsultasIaFlotante puedeLeer={puede(perfil, "consultas-ia", "leer")} />
+      ) : null}
     </div>
   );
 }

@@ -29,6 +29,7 @@ export type FiltrosExportAnalytics = {
   envase: string;
   causa: { nombre: string; tipo: "prog" | "no" } | null;
   familia: FamiliaStock;
+  articulo: string;
   comparar: boolean;
 };
 
@@ -106,6 +107,10 @@ function filtros(input: FiltrosExportAnalytics): Fila[] {
     }
   } else {
     out.push(fila("Filtros", "Familia", etiquetaFamilia(input.familia)));
+    if (input.familia !== "Todas") {
+      const etiqueta = CATALOGOS[input.familia].etiquetaItem;
+      out.push(fila("Filtros", etiqueta, input.articulo || "Todos"));
+    }
   }
   out.push(fila("Emisión", "Informe", lineaEmision()));
   return out;
@@ -198,6 +203,7 @@ function filasStock(datos: DatosStockAnalytics, input: FiltrosExportAnalytics): 
     familia: input.familia,
     categoria: input.categoria,
     producto: input.producto,
+    articulo: input.articulo,
   });
   const familiaKpi = input.familia === "Todas" ? "ingredientes" : input.familia;
   const unidad = CATALOGOS[familiaKpi].unidad;

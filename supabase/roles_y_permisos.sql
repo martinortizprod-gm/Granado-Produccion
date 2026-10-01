@@ -68,6 +68,7 @@ cross join (
     ('produccion'),
     ('informes'),
     ('analytics'),
+    ('consultas-ia'),
     ('contabilidad'),
     ('usuarios'),
     ('respaldos')
@@ -99,6 +100,7 @@ cross join (
     ('produccion', false, false, false),
     ('informes', false, false, false),
     ('analytics', false, false, false),
+    ('consultas-ia', false, false, false),
     ('contabilidad', false, false, false),
     ('usuarios', false, false, false),
     ('respaldos', false, false, false)

@@ -18,7 +18,7 @@ import {
   armarSolicitudesVsProducido,
   opcionesLote,
 } from "@/lib/informes/logic";
-import { hoyIso, primerDiaMes } from "@/lib/planificacion/logic";
+import { diasDelMes, etiquetaMes, hoyIso, primerDiaMes } from "@/lib/planificacion/logic";
 import { nroDec, type DatosProduccion } from "@/lib/produccion/logic";
 import {
   colorEstado,
@@ -42,13 +42,28 @@ const COLS_VS: ColDef[] = [
   { id: "fuente", label: "Fuente" },
 ];
 
+function mesesConDatos(solicitudes: DatosProduccion["solicitudes"], hoy: string) {
+  const actual = primerDiaMes(hoy);
+  const meses = new Set<string>([actual]);
+  for (const item of solicitudes) {
+    const fecha = item.fecha_estimada || item.fecha_fin || item.fecha_registro;
+    if (!fecha) continue;
+    const mes = primerDiaMes(fecha);
+    if (mes <= actual) meses.add(mes);
+  }
+  return [...meses].sort((a, b) => (a < b ? 1 : -1));
+}
+
 export function InformesClient({ datos }: { datos: DatosProduccion }) {
   const hoy = hoyIso();
-  const [ficha, setFicha] = useState<FichaId>("lote");
+  const mesActual = primerDiaMes(hoy);
+  const [ficha, setFicha] = useState<FichaId>("comparativo");
   const [idSolicitud, setIdSolicitud] = useState("");
-  const [desde, setDesde] = useState(primerDiaMes(hoy));
-  const [hasta, setHasta] = useState(hoy);
+  const [mes, setMes] = useState(mesActual);
+  const desde = primerDiaMes(mes);
+  const hasta = diasDelMes(mes).at(-1) ?? desde;
   const [informe, setInforme] = useState<InformeFicha | null>(null);
+  const meses = useMemo(() => mesesConDatos(datos.solicitudes, hoy), [datos.solicitudes, hoy]);
   const lotes = useMemo(() => opcionesLote(datos.solicitudes), [datos.solicitudes]);
   const idElegido = Number(idSolicitud) || 0;
   const hoja = useMemo(
@@ -71,8 +86,6 @@ export function InformesClient({ datos }: { datos: DatosProduccion }) {
     else if (id === "receta" && receta) setInforme(armarInformeConsumoReceta(receta));
     else if (id === "comparativo") setInforme(armarInformeSolicitudesVs(comparativo, desde, hasta));
   }
-
-  const errorFechas = desde && hasta && desde > hasta;
 
   return (
     <div className="g-stack">
@@ -104,30 +117,17 @@ export function InformesClient({ datos }: { datos: DatosProduccion }) {
             </select>
           </label>
           <label>
-            <span className="g-label">Desde</span>
-            <input
-              type="date"
-              className="g-input"
-              value={desde}
-              onChange={(e) => setDesde(e.target.value)}
-            />
-          </label>
-          <label>
-            <span className="g-label">Hasta</span>
-            <input
-              type="date"
-              className="g-input"
-              value={hasta}
-              onChange={(e) => setHasta(e.target.value)}
-            />
+            <span className="g-label">Mes</span>
+            <select className="g-input" value={mes} onChange={(e) => setMes(e.target.value)}>
+              {meses.map((item) => (
+                <option key={item} value={item}>
+                  {etiquetaMes(item)}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
       </div>
-      {errorFechas ? (
-        <p className="text-[13px] text-[var(--color-danger)]">
-          La fecha desde no puede ser posterior a la fecha hasta.
-        </p>
-      ) : null}
 
       <div className="grid gap-2 lg:grid-cols-3">
         <CardFicha
@@ -176,7 +176,7 @@ export function InformesClient({ datos }: { datos: DatosProduccion }) {
             { label: "Solicitado", valor: fmtKg(comparativo.kgSolicitados) },
             { label: "Producido", valor: fmtKg(comparativo.kgProducidos) },
           ]}
-          puedeExportar={!errorFechas}
+          puedeExportar
           onVer={() => setFicha("comparativo")}
           onExportar={() => abrir("comparativo")}
         />

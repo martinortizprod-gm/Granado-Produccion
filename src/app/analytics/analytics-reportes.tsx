@@ -114,6 +114,7 @@ export function AnalyticsReportes({ jornadas, plan, stock }: Props) {
       envase: "Todos",
       causa: null,
       familia: "Todas",
+      articulo: "Todos",
       comparar: plantilla.tab === "produccion",
       resumen,
       plan:

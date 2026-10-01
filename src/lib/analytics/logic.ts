@@ -12,15 +12,32 @@ import { hoyIso } from "@/lib/planificacion/logic";
 
 export const SIN_CATEGORIA = "Sin categoría";
 export const SIN_ENVASE = "Sin envase";
-export const PRESETS = [
-  "Mes actual",
-  "Mes anterior",
-  "Últimos 30 días",
-  "Año actual",
-  "Personalizado",
-] as const;
+/** Meses que se ofrecen como atajo, el actual al final. */
+export const MESES_EN_FILTRO = 5;
+export const PRESET_PERSONALIZADO = "personalizado";
 
-export type PresetAnalytics = (typeof PRESETS)[number];
+const NOMBRES_MES = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+
+export type OpcionMes = {
+  clave: string;
+  etiqueta: string;
+  anio: number;
+  desde: string;
+  hasta: string;
+};
 
 export type ParteIndicador = {
   nombre: string;
@@ -193,27 +210,26 @@ export function rangoSemana(hoy = hoyIso()) {
   return { desde: sumarDias(hoy, aLunes), hasta: hoy };
 }
 
-export function rangoPreset(
-  nombre: string,
-  hoy = hoyIso(),
-): { desde: string; hasta: string } | null {
+export function mesesPeriodo(hoy = hoyIso(), cantidad = MESES_EN_FILTRO): OpcionMes[] {
   const { y, m } = partesFecha(hoy);
-  const mes = String(m).padStart(2, "0");
-  if (nombre === "Mes actual") {
-    return { desde: `${y}-${mes}-01`, hasta: hoy };
+  const opciones: OpcionMes[] = [];
+  for (let i = cantidad - 1; i >= 0; i--) {
+    const cursor = new Date(Date.UTC(y, m - 1 - i, 1));
+    const anio = cursor.getUTCFullYear();
+    const mes = cursor.getUTCMonth() + 1;
+    const clave = `${anio}-${String(mes).padStart(2, "0")}`;
+    const desde = `${clave}-01`;
+    const finMes = new Date(Date.UTC(anio, mes, 0)).toISOString().slice(0, 10);
+    const hasta = clave === hoy.slice(0, 7) && finMes > hoy ? hoy : finMes;
+    opciones.push({
+      clave,
+      etiqueta: NOMBRES_MES[mes - 1],
+      anio,
+      desde,
+      hasta,
+    });
   }
-  if (nombre === "Mes anterior") {
-    const primeroActual = `${y}-${mes}-01`;
-    const hasta = sumarDias(primeroActual, -1);
-    return { desde: `${hasta.slice(0, 7)}-01`, hasta };
-  }
-  if (nombre === "Últimos 30 días") {
-    return { desde: sumarDias(hoy, -29), hasta: hoy };
-  }
-  if (nombre === "Año actual") {
-    return { desde: `${y}-01-01`, hasta: hoy };
-  }
-  return null;
+  return opciones;
 }
 
 function mapaFilas(filas: Record<string, unknown>[]) {

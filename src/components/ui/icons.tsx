@@ -26,6 +26,15 @@ function Svg({
   );
 }
 
+export function IconSpark(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 3.5 13.4 8.2 18 9.5 13.4 10.8 12 15.5 10.6 10.8 6 9.5 10.6 8.2 12 3.5Z" />
+      <path d="M18 14.5 18.7 16.6 19.8 17.2 18.7 17.8 18 19.8 17.3 17.8 16.2 17.2 17.3 16.6 18 14.5Z" />
+    </Svg>
+  );
+}
+
 export function IconHome(p: IconProps) {
   return (
     <Svg {...p}>
@@ -364,6 +373,7 @@ const MAP: Record<ModuloId, (p: IconProps) => ReactNode> = {
   proveedores: IconBuilding,
   clientes: IconUsers,
   analytics: IconChart,
+  "consultas-ia": IconSpark,
   contabilidad: IconCalculator,
   usuarios: IconUsers,
   respaldos: IconDatabase,
