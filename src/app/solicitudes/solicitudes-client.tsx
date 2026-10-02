@@ -165,11 +165,12 @@ export function SolicitudesClient({
 
       {julianoAbierto ? <PanelDiasJulianos onCerrar={() => setJulianoAbierto(false)} /> : null}
 
-      <div className="g-kpis grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="g-kpis grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <Kpi titulo="Total" valor={resumen.total} tono="primary" />
         <Kpi titulo="Pendientes" valor={resumen.pendientes} tono="muted" />
         <Kpi titulo="En producción" valor={resumen.en_produccion} tono="warning" />
         <Kpi titulo="Completadas" valor={resumen.completadas} tono="success" />
+        <Kpi titulo="Canceladas" valor={resumen.canceladas} tono="muted" />
       </div>
 
       <div className="g-card px-3 py-2.5">
@@ -185,6 +186,7 @@ export function SolicitudesClient({
               <option>Pendientes</option>
               <option>En producción</option>
               <option>Completadas</option>
+              <option>Canceladas</option>
             </select>
           </label>
           <label>
@@ -233,7 +235,7 @@ export function SolicitudesClient({
               onChange={(e) => setSoloPendientes(e.target.checked)}
               className="h-3.5 w-3.5 accent-[var(--color-primary)]"
             />
-            Solo pendientes
+            Sin finalizar
           </label>
         </div>
       </div>

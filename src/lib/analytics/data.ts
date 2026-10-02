@@ -35,6 +35,8 @@ export async function cargarAnalytics(): Promise<{
     movimientos: [],
     consumos: [],
     barridos: [],
+    nombresProducto: [],
+    deltasProducto: [],
   };
   if (!supabaseEnvConfigured()) {
     return { jornadas: [], plan: [], stock: vacioStock, error: "Falta la configuración de conexión." };
@@ -59,6 +61,7 @@ export async function cargarAnalytics(): Promise<{
       movEti,
       consumos,
       barridos,
+      movProd,
     ] = await Promise.all([
       leer(
         "produccion",
@@ -81,6 +84,7 @@ export async function cargarAnalytics(): Promise<{
       leer("movimientos_etiquetas", "id, tipo, fecha_registro, fecha_vencimiento, id_etiqueta, lote, cantidad"),
       leer("consumo", "fecha_registro, id_solicitud, id_articulo, lote_articulo, cantidad"),
       leer("barridos_linea", "id, id_solicitud, id_ingrediente, pesaje_total"),
+      leer("movimientos_productos", "id, tipo, fecha_registro, id_producto, stk_kg, observaciones"),
     ]);
     return {
       jornadas: armarJornadas({
@@ -108,6 +112,7 @@ export async function cargarAnalytics(): Promise<{
         solicitudes,
         productos,
         producciones,
+        movProd,
       }),
       error: null,
     };

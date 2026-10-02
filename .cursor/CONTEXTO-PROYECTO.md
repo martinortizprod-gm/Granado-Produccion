@@ -113,7 +113,7 @@ Py-Produccion/
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (solo servidor; en Vercel sin `NEXT_PUBLIC_`)
-- `GEMINI_API_KEY` (solo servidor; Consultas IA. Opcional `GEMINI_MODEL`, por defecto `gemini-3.5-flash-lite`; si está saturado prueba otros Flash)
+- `GEMINI_API_KEY` (solo servidor; Consultas IA. Opcional `GEMINI_MODEL`, por defecto `gemini-3.5-flash-lite`; si está saturado prueba otros Flash). En Vercel hay que cargarla en Environment Variables y volver a desplegar: `.env.local` no viaja con el repo.
 
 `.gitignore` ignora `.env*` y `/Obsoleto/` (por si reaparece la carpeta).
 
@@ -221,7 +221,7 @@ Definidos en `src/lib/modulos.ts`. Grupos del menú (solo visual): Operación, M
 | Módulo | Ruta | Qué hace |
 |--------|------|----------|
 | Inicio | `/` | Dashboard: KPIs, actividad, accesos según permiso. |
-| Solicitudes | `/solicitudes` | Pedidos de producción. Alta `/solicitudes/nueva`, edición `/solicitudes/[id]/editar`. El formulario elige **cliente** de `clientes` (opcional). Se guarda el nombre en `solicitudes.cliente` y se ve en la grilla y en el detalle. |
+| Solicitudes | `/solicitudes` | Pedidos de producción. Alta `/solicitudes/nueva`, edición `/solicitudes/[id]/editar`. El formulario elige **cliente** de `clientes` (opcional). Se guarda el nombre en `solicitudes.cliente` y se ve en la grilla y en el detalle. El estado no es una columna: se calcula. **Pendiente** = sin iniciar. **En producción** = ya se inició y no se finalizó. **Completada** = finalizada (no quedan kilos, unidades ni pallets). **Cancelada** = marcada en el formulario (`solicitudes.cancelada`). Esos cuatro estados no se pisan. |
 | Producción | `/produccion` | Jornada por solicitud/lote: pallets, horas, paradas, consumos, barridos, responsables, cierre de stock. |
 | Movimientos | `/movimientos` | Ingresos/egresos de ingredientes, insumos, envases, etiquetas, productos. En un **ingreso** de ingrediente, envase, etiqueta o insumo, Proveedor es un desplegable de `proveedores` (opcional). El egreso de ingredientes sigue siendo texto libre. La grilla de esos cuatro tipos muestra la columna Proveedor (también en el selector de columnas y en el detalle). Productos no tienen proveedor. |
 | Planificación | `/planificacion` | Plan mensual (`planificacion_*`): generar/recalcular mes, rendimientos, horarios, paradas. Query `?mes=&ops=`. |
@@ -231,7 +231,7 @@ Definidos en `src/lib/modulos.ts`. Grupos del menú (solo visual): Operación, M
 | Productos | `/productos` | Productos terminados, stock (movimientos + cierres), vínculo envase/etiqueta. |
 | Recetas | `/recetas` | Versiones (`registro_versiones`) y líneas (`recetas`) por producto. |
 | Data Analytics | `/analytics` | Tabs: producción, stock, trazabilidad, reportes. |
-| Consultas IA | `/consultas-ia` | Prueba con Gemini (solo lectura). Preguntas de stock al día, movimientos, consumos, producción, planificación, horas, causas de paradas, solicitudes y lotes. Menú Análisis, y un botón flotante en el resto de las pantallas (quien tenga permiso de ver). El Administrador entra sin correr SQL; `supabase/consultas_ia.sql` deja el permiso guardado. |
+| Consultas IA | `/consultas-ia` | Prueba con Gemini (solo lectura). Preguntas de stock al día, movimientos, consumos, producción, planificación, horas, causas de paradas, solicitudes y lotes. Si piden un gráfico, el sistema dibuja barras con los kilos que calculó. Menú Análisis, y un botón flotante en el resto de las pantallas (quien tenga permiso de ver). El panel se alarga o se ensancha arrastrando el borde; el tamaño queda en el navegador. El Administrador entra sin correr SQL; `supabase/consultas_ia.sql` deja el permiso guardado. |
 | Contabilidad | `/contabilidad` | Cuatro solapas (ingredientes, envases, etiquetas, insumos). Cada una lista los ingresos de ese tipo, abre en el mes en curso y, por defecto, solo los que **impactan**. No impacta pone los costos en cero (artículos de clientes que no se pagan). Costos y pagos llevan moneda ARS o USD. La cotización (pesos por dólar) vive en `contable_cotizacion` y los totales de la grilla se muestran en pesos. Eliminar la ficha no borra el movimiento. |
 | Usuarios | `/usuarios` | Roles, permisos, altas. Crea user en Auth + fila `usuarios`. Service role. Asignar o cambiar el rol de un usuario solo lo puede el rol Administrador. |
 | Respaldos | `/respaldos` | Export xlsx / pdf / sql / json (`POST /api/respaldos`). |
@@ -259,7 +259,7 @@ Casi todas las pages son Server Components con `dynamic = "force-dynamic"` y un 
 - produccion: `registrarJornada`, `eliminarJornada`, `guardarPrevios`, `agregarCatalogoPrevio`
 - usuarios: `listarRoles`, `listarPermisosRol`, `guardarRol`, `eliminarRol`, `listarUsuariosApp`, `crearUsuarioApp`, `actualizarUsuarioApp` (el rol solo si `esAdministrador`)
 - perfil (`src/app/perfil/actions.ts`, no es módulo): `guardarMiPerfil`, `cambiarMiClave`, `guardarMiFoto`, `quitarMiFoto`
-- consultas-ia: `consultarConsumo` (solo lectura; llama a Gemini y suma `consumo`)
+- consultas-ia: `consultarConsumo` (solo lectura; Gemini elige la consulta y el sistema calcula). **Producción** = jornadas registradas. **Producción pendiente** = kilos pedidos menos kilos ya producidos de las solicitudes sin finalizar; no es el estado Pendiente.
 
 Antes de inventar una action, buscar si ya existe.
 
@@ -279,7 +279,7 @@ Esquema: `supabase/schema_inicial.sql` (32 tablas, incluidas `proveedores` y `cl
 
 **Stock:** `movimientos_ingredientes`, `movimientos_insumos`, `movimientos_envases`, `movimientos_etiquetas`, `movimientos_productos`. Las cuatro primeras tienen `proveedor text` (ingredientes ya lo tenía; las otras tres se agregaron en `proveedores_y_clientes.sql`). No es FK: se guarda el **nombre** del proveedor. Si después se renombra el maestro, el movimiento conserva el texto anterior y, al editarlo, sigue apareciendo como opción.
 
-**Maestros de terceros:** `proveedores` y `clientes`, misma forma. `id bigint` (la app asigna `max(id)+1`), `nombre text not null`, `razon_social text not null`, `cuit`, `celular`, `mail`, `ubicacion`, `observaciones` (text, null). `solicitudes.cliente text` guarda el nombre del cliente, también sin FK.
+**Maestros de terceros:** `proveedores` y `clientes`, misma forma. `id bigint` (la app asigna `max(id)+1`), `nombre text not null`, `razon_social text not null`, `cuit`, `celular`, `mail`, `ubicacion`, `observaciones` (text, null). `solicitudes.cliente text` guarda el nombre del cliente, también sin FK. `solicitudes.cancelada boolean` (default false) marca la solicitud cancelada; el resto de los estados se calcula en `src/lib/solicitudes/logic.ts`.
 
 **Planificación:** `planificacion_mensual`, `planificacion_capacidades`, `planificacion_horarios`, `planificacion_paradas`, `planificacion_rendimientos`
 
@@ -294,8 +294,18 @@ Esquema: `supabase/schema_inicial.sql` (32 tablas, incluidas `proveedores` y `cl
 - `supabase/contabilidad.sql` — **correrlo en la base que ya está en uso** (también si ya se corrió antes: agrega `contable_pagos`). Crea `formas_de_pago`, `contable_movimientos` (`impacta`, `moneda`), `contable_pagos` (forma, monto y moneda) y `contable_cotizacion` (pesos por dólar), el bucket privado `contabilidad` y el permiso del módulo (Administrador sí, Operario no). Se puede reejecutar. La ficha se ata con `tabla_origen` + `id_movimiento`.
 - `supabase/politica_lectura_anon_dev.sql` — lectura anon temporal de catálogos (solo dev)
 - `supabase/perfil.sql` — **correrlo en la base que ya está en uso**. Crea el bucket público `perfiles` para la foto del usuario logueado. No agrega columnas. Se puede reejecutar.
+- `supabase/solicitudes_cancelada.sql` — **correrlo en la base que ya está en uso**. Agrega `solicitudes.cancelada` (boolean, default false). Sin esa columna, guardar una solicitud falla. Se puede reejecutar.
 
 **Regla de negocio clave:** una sola fuente de verdad para **lo producido**: se calcula desde **Producción** cuando el lote coincide. No inventar un stock paralelo.
+
+**Estados de una solicitud** (calculados, salvo la cancelación):
+
+- Pendiente: no se inició.
+- En producción: se inició y no se finalizó.
+- Completada: se finalizó (no quedan kilos, unidades ni pallets).
+- Cancelada: se marcó `cancelada`. Gana sobre los otros tres.
+
+**Producción** son las jornadas. **Producción pendiente** son los kilos que faltan (pedidos menos producidos) en las solicitudes sin finalizar. No es lo mismo que una solicitud pendiente.
 
 Tipos en SQL suelen ser amplios (`text` / `numeric`) por compatibilidad con el Excel/SQLite viejo. No “normalizar” tipos ni agregar FK inventadas sin pedirlo.
 

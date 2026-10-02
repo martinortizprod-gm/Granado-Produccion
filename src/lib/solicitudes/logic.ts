@@ -3,11 +3,13 @@
 export const ESTADO_PENDIENTE = "pendiente";
 export const ESTADO_PRODUCCION = "en_produccion";
 export const ESTADO_COMPLETADA = "completada";
+export const ESTADO_CANCELADA = "cancelada";
 
 export const ETIQUETAS_ESTADO: Record<string, string> = {
   [ESTADO_PENDIENTE]: "Pendiente",
   [ESTADO_PRODUCCION]: "En producción",
   [ESTADO_COMPLETADA]: "Completada",
+  [ESTADO_CANCELADA]: "Cancelada",
 };
 
 export type VersionOpcion = {
@@ -82,6 +84,7 @@ export type ResumenSolicitudes = {
   pendientes: number;
   en_produccion: number;
   completadas: number;
+  canceladas: number;
 };
 
 export function clave(valor: unknown): string {
@@ -239,19 +242,19 @@ export function enriquecerSolicitud(
     progresoReal = (unidadesCarg / unidadesSol) * 100;
   const progreso = Math.max(0, Math.min(100, progresoReal));
 
-  let estado: string;
-  if (
+  const iniciada = kgCarg > 0.01 || unidadesCarg > 0.01 || tieneProduccion;
+  const finalizada =
     kgPend <= 0.01 &&
     unidadesPend <= 0.01 &&
     palletsPend <= 0.01 &&
-    (kgSol > 0 || unidadesSol > 0 || palletsSol > 0)
-  ) {
-    estado = ESTADO_COMPLETADA;
-  } else if (kgCarg > 0.01 || unidadesCarg > 0.01 || tieneProduccion) {
-    estado = ESTADO_PRODUCCION;
-  } else {
-    estado = ESTADO_PENDIENTE;
-  }
+    (kgSol > 0 || unidadesSol > 0 || palletsSol > 0);
+  const cancelada = fila.cancelada === true || clave(fila.cancelada) === "true";
+
+  let estado: string;
+  if (cancelada) estado = ESTADO_CANCELADA;
+  else if (finalizada) estado = ESTADO_COMPLETADA;
+  else if (iniciada) estado = ESTADO_PRODUCCION;
+  else estado = ESTADO_PENDIENTE;
 
   const idProducto = idEntero(fila.id_producto);
   const idVersion = idEntero(fila.id_version);
@@ -319,7 +322,8 @@ export function ordenarSolicitudes(items: SolicitudVista[]): SolicitudVista[] {
   const prioridad: Record<string, number> = {
     [ESTADO_PENDIENTE]: 0,
     [ESTADO_PRODUCCION]: 1,
-    [ESTADO_COMPLETADA]: 2,
+    [ESTADO_CANCELADA]: 2,
+    [ESTADO_COMPLETADA]: 3,
   };
   return [...items].sort((a, b) => {
     const ga = prioridad[a.estado] ?? 9;
@@ -353,7 +357,8 @@ export function filtrarSolicitudes(
   let estadoFiltro: string | null = null;
   const e = clave(opts.estado || "");
   if (e && e !== "todos") {
-    if (e.includes("produccion") || e.includes("producción"))
+    if (e.includes("cancel")) estadoFiltro = ESTADO_CANCELADA;
+    else if (e.includes("produccion") || e.includes("producción"))
       estadoFiltro = ESTADO_PRODUCCION;
     else if (e.includes("completa")) estadoFiltro = ESTADO_COMPLETADA;
     else if (e.includes("pendiente")) estadoFiltro = ESTADO_PENDIENTE;
@@ -361,7 +366,11 @@ export function filtrarSolicitudes(
 
   return items.filter((item) => {
     if (estadoFiltro && item.estado !== estadoFiltro) return false;
-    if (opts.soloPendientes && item.estado === ESTADO_COMPLETADA) return false;
+    if (
+      opts.soloPendientes &&
+      (item.estado === ESTADO_COMPLETADA || item.estado === ESTADO_CANCELADA)
+    )
+      return false;
     const fecha =
       item.fecha_estimada || item.fecha_fin || item.fecha_registro;
     if (opts.fechaDesde && (!fecha || fecha < opts.fechaDesde)) return false;
@@ -398,11 +407,13 @@ export function resumenSolicitudes(
     pendientes: 0,
     en_produccion: 0,
     completadas: 0,
+    canceladas: 0,
   };
   for (const item of items) {
     if (item.estado === ESTADO_PENDIENTE) r.pendientes++;
     else if (item.estado === ESTADO_PRODUCCION) r.en_produccion++;
     else if (item.estado === ESTADO_COMPLETADA) r.completadas++;
+    else if (item.estado === ESTADO_CANCELADA) r.canceladas++;
   }
   return r;
 }
@@ -423,6 +434,7 @@ export function armarFilaGuardar(
     fecha_estimada: string;
     fecha_fin?: string | null;
     pallets_pendientes?: number | null;
+    cancelada?: boolean;
   },
   idRegistro: number,
 ): Record<string, unknown> {
@@ -461,6 +473,7 @@ export function armarFilaGuardar(
     fecha_estimada: `${fechaEst} 00:00:00`,
     fecha_fin: `${aFecha(datos.fecha_fin) || fechaEst} 00:00:00`,
     pallets_pendientes: pendientes,
+    cancelada: datos.cancelada === true,
   };
 }
 
@@ -522,5 +535,6 @@ export function validarDatosSolicitud(
 export function colorEstado(estado: string): string {
   if (estado === ESTADO_COMPLETADA) return "g-badge g-badge-success";
   if (estado === ESTADO_PRODUCCION) return "g-badge g-badge-warning";
+  if (estado === ESTADO_CANCELADA) return "g-badge g-badge-danger";
   return "g-badge g-badge-neutral";
 }

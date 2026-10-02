@@ -97,15 +97,20 @@ export async function consultarConsumo(pregunta: string): Promise<RespuestaConsu
       };
     }
 
-    const desde = fechaIso(llamada.args.desde);
-    const hasta = fechaIso(llamada.args.hasta);
-    if (!desde || !hasta || desde > hasta) {
-      return { ok: false, error: "No se pudo armar el período. Reformulá la pregunta." };
-    }
-    const dias =
-      (Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86400000;
-    if (dias > 366) {
-      return { ok: false, error: "El período no puede superar un año." };
+    const sinPeriodoObligatorio =
+      llamada.name === "solicitudes" || llamada.name === "produccion_pendiente";
+    const desde = fechaIso(llamada.args.desde) ?? "";
+    const hasta = fechaIso(llamada.args.hasta) ?? "";
+    const pidioPeriodo = Boolean(desde || hasta);
+    if (!sinPeriodoObligatorio || pidioPeriodo) {
+      if (!desde || !hasta || desde > hasta) {
+        return { ok: false, error: "No se pudo armar el período. Reformulá la pregunta." };
+      }
+      const dias =
+        (Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86400000;
+      if (dias > 366) {
+        return { ok: false, error: "El período no puede superar un año." };
+      }
     }
 
     if (esOperacion(llamada.name)) {

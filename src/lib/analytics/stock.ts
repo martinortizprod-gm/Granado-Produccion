@@ -16,18 +16,21 @@ import {
   texto,
 } from "@/lib/solicitudes/logic";
 import { hoyIso } from "@/lib/planificacion/logic";
+import { idCierreProduccion } from "@/lib/productos/logic";
 import { sumarDias, type ParteIndicador } from "@/lib/analytics/logic";
 
 export const DIAS_VENCIMIENTO = 30;
-export const FAMILIAS_STOCK: { id: KindCatalogo | "Todas"; label: string }[] = [
+export const FAMILIAS_STOCK: { id: KindCatalogo | "productos" | "Todas"; label: string }[] = [
   { id: "Todas", label: "Todas" },
   { id: "ingredientes", label: "Ingredientes" },
   { id: "insumos", label: "Insumos" },
   { id: "envases", label: "Envases" },
   { id: "etiquetas", label: "Etiquetas" },
+  { id: "productos", label: "Productos" },
 ];
 
-export type FamiliaStock = KindCatalogo | "Todas";
+export type FamiliaStock = KindCatalogo | "productos" | "Todas";
+export type FamiliaCorte = KindCatalogo | "productos";
 
 export type MovimientoStock = {
   familia: KindCatalogo;
@@ -70,11 +73,31 @@ export type LoteAlerta = {
   estado: "vencido" | "proximo";
 };
 
+export type DeltaProducto = {
+  articulo: string;
+  fecha: string | null;
+  ingresos: number;
+  egresos: number;
+};
+
+export type FilaCorteStock = {
+  familia: FamiliaCorte;
+  articulo: string;
+  unidad: string;
+  inicial: number;
+  ingresos: number;
+  egresos: number;
+  consumos: number;
+  final: number;
+};
+
 export type DatosStockAnalytics = {
   articulos: { familia: KindCatalogo; items: ArticuloVista[] }[];
   movimientos: MovimientoStock[];
   consumos: ConsumoStock[];
   barridos: BarridoStock[];
+  nombresProducto: string[];
+  deltasProducto: DeltaProducto[];
 };
 
 export type ResumenStock = {
@@ -110,6 +133,7 @@ type CrudoStock = {
   solicitudes: Record<string, unknown>[];
   productos: Record<string, unknown>[];
   producciones: Record<string, unknown>[];
+  movProd: Record<string, unknown>[];
 };
 
 function mapa<T extends Record<string, unknown>>(filas: T[]) {
@@ -266,7 +290,182 @@ export function armarDatosStock(crudo: CrudoStock): DatosStockAnalytics {
     });
   }
 
-  return { articulos, movimientos: movs, consumos, barridos };
+  const nombresProducto: string[] = [];
+  const nombreProdPorId = new Map<number, string>();
+  for (const fila of crudo.productos) {
+    const ident = idEntero(fila.id);
+    const nombre = texto(fila.producto);
+    if (!nombre) continue;
+    nombresProducto.push(nombre);
+    if (ident != null) nombreProdPorId.set(ident, nombre);
+  }
+  nombresProducto.sort((a, b) => a.localeCompare(b, "es"));
+
+  const cierres = new Set<number>();
+  for (const fila of crudo.movProd) {
+    const cierre = idCierreProduccion(fila.observaciones);
+    if (cierre != null) cierres.add(cierre);
+  }
+
+  const deltasProducto: DeltaProducto[] = [];
+  for (const fila of crudo.movProd) {
+    const ident = idEntero(fila.id_producto);
+    const articulo = ident != null ? nombreProdPorId.get(ident) : "";
+    if (!articulo) continue;
+    const signo = signoTipo(fila.tipo);
+    const kg = numero(fila.stk_kg);
+    if (signo === 0 || Math.abs(kg) <= 0.0005) continue;
+    deltasProducto.push({
+      articulo,
+      fecha: aFecha(fila.fecha_registro),
+      ingresos: signo > 0 ? kg : 0,
+      egresos: signo < 0 ? kg : 0,
+    });
+  }
+  for (const fila of crudo.producciones) {
+    const idProd = idEntero(fila.id);
+    if (idProd != null && cierres.has(idProd)) continue;
+    const kg = numero(fila.peso_kg);
+    if (Math.abs(kg) <= 0.0005) continue;
+    const solicitud = solicitudes.get(idEntero(fila.id_solicitud) ?? -1);
+    const ident = idEntero(solicitud?.id_producto);
+    const articulo = ident != null ? nombreProdPorId.get(ident) : "";
+    if (!articulo) continue;
+    deltasProducto.push({
+      articulo,
+      fecha: aFecha(fila.fecha_registro),
+      ingresos: kg,
+      egresos: 0,
+    });
+  }
+
+  return { articulos, movimientos: movs, consumos, barridos, nombresProducto, deltasProducto };
+}
+
+function signoTipo(tipo: unknown): number {
+  const n = clave(tipo);
+  if (n === "ingreso" || n === "entrada") return 1;
+  if (n === "egreso" || n === "salida") return -1;
+  return 0;
+}
+
+const ORDEN_CORTE: FamiliaCorte[] = ["ingredientes", "insumos", "envases", "etiquetas", "productos"];
+
+function unidadCorte(familia: FamiliaCorte) {
+  return familia === "productos" ? "kg" : CATALOGOS[familia].unidad;
+}
+
+function redondo(valor: number) {
+  return Math.round(valor * 1000) / 1000;
+}
+
+function tieneMovimiento(fila: FilaCorteStock) {
+  return (
+    Math.abs(fila.inicial) > 0.0005 ||
+    Math.abs(fila.ingresos) > 0.0005 ||
+    Math.abs(fila.egresos) > 0.0005 ||
+    Math.abs(fila.consumos) > 0.0005 ||
+    Math.abs(fila.final) > 0.0005
+  );
+}
+
+export function corteStockPeriodo(
+  datos: DatosStockAnalytics,
+  opts: { desde: string; hasta: string; familia: FamiliaStock; articulo?: string },
+): FilaCorteStock[] {
+  const articulo = opts.articulo || "Todos";
+  const acum = new Map<string, { familia: FamiliaCorte; articulo: string; inicial: number; ingresos: number; egresos: number; consumos: number }>();
+
+  function bucket(familia: FamiliaCorte, nombre: string) {
+    const claveFila = `${familia}\0${nombre}`;
+    let item = acum.get(claveFila);
+    if (!item) {
+      item = { familia, articulo: nombre, inicial: 0, ingresos: 0, egresos: 0, consumos: 0 };
+      acum.set(claveFila, item);
+    }
+    return item;
+  }
+
+  function entra(familia: FamiliaCorte, nombre: string) {
+    if (opts.familia !== "Todas" && opts.familia !== familia) return false;
+    return coincideArticulo(nombre, articulo);
+  }
+
+  function aplicar(
+    fecha: string | null,
+    familia: FamiliaCorte,
+    nombre: string,
+    ingresos: number,
+    egresos: number,
+    consumos: number,
+  ) {
+    if (!fecha || !entra(familia, nombre)) return;
+    const item = bucket(familia, nombre);
+    const delta = ingresos - egresos - consumos;
+    if (fecha < opts.desde) item.inicial += delta;
+    else if (fecha <= opts.hasta) {
+      item.ingresos += ingresos;
+      item.egresos += egresos;
+      item.consumos += consumos;
+    }
+  }
+
+  for (const mov of datos.movimientos) {
+    aplicar(
+      mov.fecha,
+      mov.familia,
+      mov.articulo,
+      mov.tipo === "ingreso" ? mov.cantidad : 0,
+      mov.tipo === "egreso" ? mov.cantidad : 0,
+      0,
+    );
+  }
+  for (const cons of datos.consumos) {
+    aplicar(cons.fecha, cons.familia, cons.articulo, 0, 0, cons.cantidad);
+  }
+  for (const delta of datos.deltasProducto) {
+    aplicar(delta.fecha, "productos", delta.articulo, delta.ingresos, delta.egresos, 0);
+  }
+
+  const filas: FilaCorteStock[] = [];
+  for (const item of acum.values()) {
+    const inicial = redondo(item.inicial);
+    const ingresos = redondo(item.ingresos);
+    const egresos = redondo(item.egresos);
+    const consumos = redondo(item.consumos);
+    const fila: FilaCorteStock = {
+      familia: item.familia,
+      articulo: item.articulo,
+      unidad: unidadCorte(item.familia),
+      inicial,
+      ingresos,
+      egresos,
+      consumos,
+      final: redondo(inicial + ingresos - egresos - consumos),
+    };
+    if (tieneMovimiento(fila)) filas.push(fila);
+  }
+
+  if (articulo !== "Todos" && opts.familia !== "Todas" && !filas.some((fila) => fila.articulo === articulo)) {
+    filas.push({
+      familia: opts.familia,
+      articulo,
+      unidad: unidadCorte(opts.familia),
+      inicial: 0,
+      ingresos: 0,
+      egresos: 0,
+      consumos: 0,
+      final: 0,
+    });
+  }
+
+  const orden = new Map(ORDEN_CORTE.map((familia, indice) => [familia, indice]));
+  filas.sort(
+    (a, b) =>
+      (orden.get(a.familia) ?? 0) - (orden.get(b.familia) ?? 0) ||
+      a.articulo.localeCompare(b.articulo, "es"),
+  );
+  return filas;
 }
 
 function partesDe(mapa: Map<string, number>, total: number): ParteIndicador[] {
@@ -303,7 +502,7 @@ export function resumenStock(
   opts: {
     desde: string;
     hasta: string;
-    familia: FamiliaStock;
+    familia: Exclude<FamiliaStock, "productos">;
     categoria: string;
     producto: string;
     articulo?: string;

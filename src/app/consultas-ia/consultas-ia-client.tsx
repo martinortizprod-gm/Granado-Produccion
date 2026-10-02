@@ -94,7 +94,10 @@ export function ConsultasIaClient({
         <section className="g-card flex flex-col gap-3 p-3">
           <p className="text-[14px] text-[var(--color-text)]">{resultado.resumen}</p>
           <p className="text-[12px] text-[var(--color-text-muted)]">
-            {fechaVisible(resultado.desde)} al {fechaVisible(resultado.hasta)}. {resultado.fuente}
+            {resultado.desde && resultado.hasta
+              ? `${fechaVisible(resultado.desde)} al ${fechaVisible(resultado.hasta)}. `
+              : ""}
+            {resultado.fuente}
             {resultado.redactoIa
               ? " El texto lo redactó Gemini; los datos los calculó el sistema."
               : " El texto y los datos los armó el sistema."}

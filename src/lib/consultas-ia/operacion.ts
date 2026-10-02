@@ -54,7 +54,8 @@ export function esOperacion(nombre: string) {
     nombre === "planificacion" ||
     nombre === "tiempos_produccion" ||
     nombre === "causas_paradas" ||
-    nombre === "solicitudes"
+    nombre === "solicitudes" ||
+    nombre === "produccion_pendiente"
   );
 }
 
@@ -649,12 +650,7 @@ function consultarCausas(datos: DatosConsulta, args: Record<string, unknown>, de
   };
 }
 
-function consultarSolicitudes(
-  datos: DatosConsulta,
-  args: Record<string, unknown>,
-  desde: string,
-  hasta: string,
-): TablaIa {
+function vistasSolicitud(datos: DatosConsulta) {
   const porSolicitud = new Map<number, { pallets: number; unidades: number; kg: number }>();
   for (const fila of datos.producciones) {
     const idSol = idEntero(fila.id_solicitud);
@@ -678,12 +674,25 @@ function consultarSolicitudes(
     return id == null ? [] : [[id, fila] as const];
   }));
   const etiquetas = new Map<number, Record<string, unknown>>();
-  const vistas = datos.solicitudes.map((fila) =>
+  return datos.solicitudes.map((fila) =>
     enriquecerSolicitud(fila, porSolicitud, productos, versiones, envases, etiquetas),
   );
+}
+
+function textoPeriodo(desde: string, hasta: string) {
+  if (desde && hasta) return `del ${fechaVisible(desde)} al ${fechaVisible(hasta)}`;
+  return "al día de hoy";
+}
+
+function consultarSolicitudes(
+  datos: DatosConsulta,
+  args: Record<string, unknown>,
+  desde: string,
+  hasta: string,
+): TablaIa {
   const estado = typeof args.estado === "string" ? args.estado : "";
   const busqueda = typeof args.nombre === "string" ? args.nombre : "";
-  const filtradas = filtrarSolicitudes(vistas, {
+  const filtradas = filtrarSolicitudes(vistasSolicitud(datos), {
     estado,
     busqueda,
     fechaDesde: desde,
@@ -703,12 +712,59 @@ function consultarSolicitudes(
   const pendientes = filtradas.filter((item) => item.estado === "pendiente").length;
   const enCurso = filtradas.filter((item) => item.estado === "en_produccion").length;
   const listas = filtradas.filter((item) => item.estado === "completada").length;
+  const canceladas = filtradas.filter((item) => item.estado === "cancelada").length;
+  const periodo = textoPeriodo(desde, hasta);
+  const pedido = clave(estado);
+  const vacio = pedido.includes("cancel")
+    ? `No hay solicitudes canceladas ${periodo}.`
+    : pedido.includes("produccion")
+      ? `No hay solicitudes iniciadas y sin finalizar ${periodo}.`
+      : pedido.includes("completa")
+        ? `No hay solicitudes finalizadas ${periodo}.`
+        : pedido.includes("pendiente")
+          ? `No hay solicitudes sin iniciar ${periodo}.`
+          : `No hay solicitudes ${periodo}.`;
   return {
     resumen: filtradas.length
-      ? `Solicitudes del ${fechaVisible(desde)} al ${fechaVisible(hasta)}: ${filtradas.length} (${pendientes} pendientes, ${enCurso} en producción, ${listas} completadas).${corte.nota}`
-      : `No hay solicitudes en ese período.`,
-    fuente: "El estado sale de los kilos pedidos contra lo producido en las jornadas. La fecha es la estimada, o la de fin, o la de registro.",
+      ? `Solicitudes ${periodo}: ${filtradas.length} (${pendientes} sin iniciar, ${enCurso} en producción, ${listas} finalizadas, ${canceladas} canceladas).${corte.nota}`
+      : vacio,
+    fuente:
+      "Pendiente = sin iniciar. En producción = ya se inició y no se finalizó. Completada = finalizada. Cancelada = marcada como cancelada.",
     columnas: ["Fecha", "Lote", "Producto", "Categoría", "Estado", "Kg pedidos", "Kg producidos"],
+    filas: corte.filas,
+  };
+}
+
+function consultarProduccionPendiente(
+  datos: DatosConsulta,
+  args: Record<string, unknown>,
+  desde: string,
+  hasta: string,
+): TablaIa {
+  const busqueda = typeof args.nombre === "string" ? args.nombre : "";
+  const abiertas = filtrarSolicitudes(vistasSolicitud(datos), {
+    busqueda,
+    fechaDesde: desde,
+    fechaHasta: hasta,
+  }).filter((item) => item.estado === "pendiente" || item.estado === "en_produccion");
+  const kg = abiertas.reduce((suma, item) => suma + item.kg_pendientes, 0);
+  const corte = cortar(
+    abiertas.map((item) => [
+      item.lote || "—",
+      item.producto || "—",
+      item.estado_etiqueta,
+      nro(item.kg_solicitados),
+      nro(item.kg_cargados),
+      nro(item.kg_pendientes),
+    ]),
+  );
+  return {
+    resumen: abiertas.length
+      ? `Producción pendiente ${textoPeriodo(desde, hasta)}: ${fmtKg(kg)} en ${abiertas.length} solicitudes sin finalizar.${corte.nota}`
+      : "No hay producción pendiente. No quedan kilos por elaborar.",
+    fuente:
+      "Producción pendiente = kilos pedidos menos kilos ya producidos. No es el estado Pendiente de la solicitud.",
+    columnas: ["Lote", "Producto", "Estado", "Kg pedidos", "Kg producidos", "Kg pendientes"],
     filas: corte.filas,
   };
 }
@@ -728,5 +784,6 @@ export function resolverOperacion(
   if (nombre === "tiempos_produccion") return consultarTiempos(datos, desde, hasta);
   if (nombre === "causas_paradas") return consultarCausas(datos, args, desde, hasta);
   if (nombre === "solicitudes") return consultarSolicitudes(datos, args, desde, hasta);
+  if (nombre === "produccion_pendiente") return consultarProduccionPendiente(datos, args, desde, hasta);
   return { error: "Esa consulta no está disponible." };
 }

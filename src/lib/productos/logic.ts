@@ -99,7 +99,7 @@ function saldoVacio(): Saldo {
   };
 }
 
-function idCierre(observaciones: unknown): number | null {
+export function idCierreProduccion(observaciones: unknown): number | null {
   const t = texto(observaciones);
   if (!t.startsWith(PREFIJO_CIERRE)) return null;
   return idEntero(t.slice(PREFIJO_CIERRE.length));
@@ -151,7 +151,7 @@ export function calcularStockProductos(
       item.stk_un += sig * un;
       item.stk_kg += sig * kg;
     }
-    const cierre = idCierre(mov.observaciones);
+    const cierre = idCierreProduccion(mov.observaciones);
     if (cierre != null) cierres.add(cierre);
   }
 

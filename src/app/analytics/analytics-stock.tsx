@@ -16,6 +16,7 @@ import {
 import {
   DIAS_VENCIMIENTO,
   FAMILIAS_STOCK,
+  corteStockPeriodo,
   resumenStock,
   type DatosStockAnalytics,
   type FamiliaStock,
@@ -55,23 +56,37 @@ export function AnalyticsStock({
   onFamilia,
   onArticulo,
 }: Props) {
+  const esProductos = familia === "productos";
   const opcionesArticulo = useMemo(() => {
     if (familia === "Todas") return [];
-    const grupo = datos.articulos.find((item) => item.familia === familia);
     const nombres = new Set<string>();
-    for (const item of grupo?.items ?? []) {
-      const nombre = item.nombre || item.codigo;
-      if (nombre) nombres.add(nombre);
+    if (esProductos) {
+      for (const nombre of datos.nombresProducto) nombres.add(nombre);
+      for (const delta of datos.deltasProducto) if (delta.articulo) nombres.add(delta.articulo);
+    } else {
+      const grupo = datos.articulos.find((item) => item.familia === familia);
+      for (const item of grupo?.items ?? []) {
+        const nombre = item.nombre || item.codigo;
+        if (nombre) nombres.add(nombre);
+      }
     }
     return [...nombres].sort((a, b) => a.localeCompare(b, "es"));
-  }, [datos, familia]);
+  }, [datos, familia, esProductos]);
   const resumen = useMemo(
-    () => resumenStock(datos, { desde, hasta, familia, categoria, producto, articulo }),
+    () =>
+      familia === "productos"
+        ? null
+        : resumenStock(datos, { desde, hasta, familia, categoria, producto, articulo }),
     [datos, desde, hasta, familia, categoria, producto, articulo],
   );
-  const familiaKpi: KindCatalogo = familia === "Todas" ? "ingredientes" : familia;
+  const corte = useMemo(
+    () => corteStockPeriodo(datos, { desde, hasta, familia, articulo }),
+    [datos, desde, hasta, familia, articulo],
+  );
+  const familiaKpi: KindCatalogo = familia === "Todas" || familia === "productos" ? "ingredientes" : familia;
   const unidad = CATALOGOS[familiaKpi].unidad;
-  const etiquetaFam = familia === "Todas" ? "ingredientes" : CATALOGOS[familia].titulo.toLowerCase();
+  const etiquetaFam =
+    familia === "Todas" || familia === "productos" ? "ingredientes" : CATALOGOS[familia].titulo.toLowerCase();
 
   return (
     <div className="g-stack">
@@ -93,7 +108,7 @@ export function AnalyticsStock({
           </label>
           {familia !== "Todas" ? (
             <label className="w-full max-w-xs">
-              <span className="g-label">{CATALOGOS[familia].etiquetaItem}</span>
+              <span className="g-label">{esProductos ? "Producto" : CATALOGOS[familia].etiquetaItem}</span>
               <select className="g-input" value={articulo} onChange={(e) => onArticulo(e.target.value)}>
                 <option>Todos</option>
                 {opcionesArticulo.map((item) => (
@@ -104,12 +119,33 @@ export function AnalyticsStock({
           ) : null}
         </div>
         <p className="mt-2 text-[12px] text-[var(--color-text-muted)]">
-          El stock y los vencimientos son el estado actual. Consumo, movimientos y barridos respetan el período
-          {familia !== "Todas" ? `, el ${CATALOGOS[familia].etiquetaItem.toLowerCase()}` : ""}
-          {categoria !== "Todos" || producto !== "Todos" ? " y el recorte de producto/categoría" : ""}.
+          {esProductos
+            ? "En productos, lo fabricado entra como ingreso y no hay consumo de producción. La cantidad es en kilos."
+            : `El stock y los vencimientos de abajo son el estado actual. Consumo, movimientos y barridos respetan el período${
+                familia !== "Todas" ? `, el ${CATALOGOS[familia].etiquetaItem.toLowerCase()}` : ""
+              }${categoria !== "Todos" || producto !== "Todos" ? " y el recorte de producto/categoría" : ""}.`}
         </p>
       </div>
 
+      <Tabla
+        titulo="Stock del período"
+        vacio="No hay saldo ni movimientos en este período con estos filtros."
+        columnas={["Familia", "Artículo", "Stock inicial", "Ingresos", "Egresos", "Consumos", "Stock final"]}
+        columnasNumero={[2, 3, 4, 5, 6]}
+        filas={corte.map((item) => [
+          FAMILIAS_STOCK.find((f) => f.id === item.familia)?.label ?? item.familia,
+          item.articulo,
+          fmtCant(item.inicial, item.unidad),
+          fmtCant(item.ingresos, item.unidad),
+          fmtCant(item.egresos, item.unidad),
+          fmtCant(item.consumos, item.unidad),
+          fmtCant(item.final, item.unidad),
+        ])}
+        pie="Stock inicial es el saldo anterior a la fecha desde. Ingresos, egresos y consumos son solo los de esas fechas. Stock final = inicial + ingresos − egresos − consumos. El corte es por día completo."
+      />
+
+      {resumen ? (
+      <>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         <Kpi
           tono="mint"
@@ -157,7 +193,11 @@ export function AnalyticsStock({
 
       <div className="grid gap-2 lg:grid-cols-2">
         <PanelPartes
-          titulo={familia === "Todas" ? "Movimientos de ingredientes" : `Movimientos · ${CATALOGOS[familia].titulo}`}
+          titulo={
+            familia === "Todas" || familia === "productos"
+              ? "Movimientos de ingredientes"
+              : `Movimientos · ${CATALOGOS[familia].titulo}`
+          }
           partes={resumen.porFamiliaMov}
           unidad={unidad === "kg" ? "kg" : "un"}
         />
@@ -217,6 +257,8 @@ export function AnalyticsStock({
           item.idSolicitud != null ? String(item.idSolicitud) : "—",
         ])}
       />
+      </>
+      ) : null}
     </div>
   );
 }
@@ -253,6 +295,7 @@ function Tabla({
   filas,
   marcas,
   pie,
+  columnasNumero,
 }: {
   titulo: string;
   vacio: string;
@@ -260,6 +303,7 @@ function Tabla({
   filas: string[][];
   marcas?: string[];
   pie?: string;
+  columnasNumero?: number[];
 }) {
   return (
     <div className="g-table-wrap min-w-0">
@@ -288,7 +332,11 @@ function Tabla({
                   {fila.map((celda, j) => (
                     <td
                       key={j}
-                      className={j >= fila.length - 3 ? "tabular-nums whitespace-nowrap" : undefined}
+                      className={
+                        (columnasNumero ? columnasNumero.includes(j) : j >= fila.length - 3)
+                          ? "tabular-nums whitespace-nowrap"
+                          : undefined
+                      }
                     >
                       {marcas && j === 0 ? (
                         <span

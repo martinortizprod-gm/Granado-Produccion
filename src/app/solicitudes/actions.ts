@@ -26,7 +26,15 @@ export type DatosFormSolicitud = {
   unidades: number;
   fecha_registro: string;
   fecha_estimada: string;
+  cancelada?: boolean;
 };
+
+function mensajeGuardado(mensaje: string) {
+  if (mensaje.toLowerCase().includes("cancelada")) {
+    return "Falta la columna cancelada en solicitudes. Ejecutá supabase/solicitudes_cancelada.sql en Supabase y volvé a guardar.";
+  }
+  return mensaje;
+}
 
 async function lotesExistentes() {
   const admin = createAdminClient();
@@ -53,7 +61,7 @@ export async function crearSolicitud(datos: DatosFormSolicitud) {
   );
   const admin = createAdminClient();
   const { error } = await admin.from("solicitudes").insert(fila);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(mensajeGuardado(error.message));
   revalidatePath("/solicitudes");
   return { id };
 }
@@ -83,7 +91,7 @@ export async function actualizarSolicitud(
   );
   const admin = createAdminClient();
   const { error } = await admin.from("solicitudes").update(fila).eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(mensajeGuardado(error.message));
   revalidatePath("/solicitudes");
   return { id };
 }

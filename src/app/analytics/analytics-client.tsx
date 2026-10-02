@@ -430,7 +430,8 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
           </label>
         ) : (
           <p className="mt-2 text-[12px] text-[var(--color-text-muted)]">
-            Período y producto/categoría se aplican al consumo y a los barridos. El stock es el saldo actual.
+            El período arma el stock inicial, los movimientos y el stock final. Producto y categoría siguen
+            aplicando al consumo y a los barridos.
           </p>
         )}
         {envase !== "Todos" || causa ? (

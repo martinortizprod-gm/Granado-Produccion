@@ -66,6 +66,7 @@ export function FormularioSolicitud({
     solicitud?.orden_produccion || "",
   );
   const [cliente, setCliente] = useState(solicitud?.cliente || "");
+  const [cancelada, setCancelada] = useState(solicitud?.estado === "cancelada");
   const [pallets, setPallets] = useState(
     String(solicitud?.pallets_solicitados || ""),
   );
@@ -140,6 +141,7 @@ export function FormularioSolicitud({
       fecha_registro: fechaRegistro,
       fecha_estimada: fechaEstimada,
       cliente,
+      cancelada,
     };
 
     startTransition(async () => {
@@ -385,6 +387,16 @@ export function FormularioSolicitud({
           </p>
         </div>
       </section>
+
+      <label className="flex items-center gap-2 text-[13px] text-[var(--color-text-secondary)]">
+        <input
+          type="checkbox"
+          checked={cancelada}
+          onChange={(e) => setCancelada(e.target.checked)}
+          className="h-3.5 w-3.5 accent-[var(--color-primary)]"
+        />
+        Marcar como cancelada
+      </label>
 
       <div className="flex justify-end gap-2">
         <Link href="/solicitudes" className="g-btn g-btn-secondary">

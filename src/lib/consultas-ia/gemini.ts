@@ -279,16 +279,33 @@ const HERRAMIENTAS = [
       },
       {
         name: "solicitudes",
-        description: "Solicitudes de un período y su estado: pendiente, en producción o completada.",
+        description:
+          "Estado de las solicitudes. Pendiente = sin iniciar. En producción = iniciada y sin finalizar. Completada = finalizada. Cancelada = marcada. No uses esta función para los kilos que faltan.",
         parameters: {
           type: "OBJECT",
           properties: {
-            estado: { type: "STRING", description: "pendiente, en_produccion, completada o todas." },
+            estado: {
+              type: "STRING",
+              description: "pendiente, en_produccion, completada, cancelada o todas.",
+            },
             nombre: { type: "STRING", description: "Filtro opcional de producto, lote o cliente. Vacío si no hay." },
-            desde: { type: "STRING", description: "YYYY-MM-DD." },
-            hasta: { type: "STRING", description: "YYYY-MM-DD." },
+            desde: { type: "STRING", description: "YYYY-MM-DD. Vacío si no nombraron un período." },
+            hasta: { type: "STRING", description: "YYYY-MM-DD. Vacío si no nombraron un período." },
           },
-          required: ["estado", "desde", "hasta"],
+          required: ["estado"],
+        },
+      },
+      {
+        name: "produccion_pendiente",
+        description:
+          "Kilos que faltan elaborar. Pedido de 5000 kg con 2000 producidos = 3000 pendientes. No es el estado pendiente de la solicitud.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            nombre: { type: "STRING", description: "Filtro opcional de producto o lote. Vacío si pide todas." },
+            desde: { type: "STRING", description: "YYYY-MM-DD. Vacío si no nombraron un período." },
+            hasta: { type: "STRING", description: "YYYY-MM-DD. Vacío si no nombraron un período." },
+          },
         },
       },
       {
@@ -319,7 +336,7 @@ export function pedidoInterpretar(pregunta: string, hoy: string) {
             "Interpretás preguntas de una planta de alimentos para bovinos.",
             `Hoy es ${hoy}.`,
             "Si nombran un mes sin año, usá el año de hoy cuando ese mes ya ocurrió o es el mes actual. Si el mes todavía no llegó este año, usá el año anterior.",
-            "No calcules cantidades. Siempre mandá desde y hasta en YYYY-MM-DD.",
+            "No calcules cantidades. Si nombran un período, mandá desde y hasta en YYYY-MM-DD.",
             "Mes actual: desde el día 1 de hoy hasta hoy. Un mes nombrado: del 1 al último día de ese mes.",
             "Stock en una fecha o al cierre de un período: stock_articulos. El saldo es hasta el día hasta.",
             "Ingresos y egresos: movimientos_articulos.",
@@ -330,7 +347,12 @@ export function pedidoInterpretar(pregunta: string, hoy: string) {
             "Plan o kilos estimados: planificacion.",
             "Horas disponibles, productivas o paradas: tiempos_produccion.",
             "Por qué se paró o causas de las horas paradas: causas_paradas.",
-            "Pedidos, solicitudes y su estado: solicitudes.",
+            "Solicitudes pendientes significa sin iniciar: solicitudes con estado pendiente.",
+            "Solicitud en producción significa iniciada y sin finalizar: solicitudes con estado en_produccion.",
+            "Solicitud completada significa finalizada. Solicitud cancelada significa marcada como cancelada.",
+            "Producción, sin la palabra pendiente, son las jornadas ya registradas: produccion_resumen.",
+            "Producción pendiente son los kilos que faltan elaborar: produccion_pendiente. No la confundas con solicitudes pendientes.",
+            "Si preguntan el estado actual o la producción pendiente y no nombran un período, dejá desde y hasta vacíos.",
             "Costos, usuarios o modificar datos: consulta_no_soportada.",
           ].join(" "),
         },

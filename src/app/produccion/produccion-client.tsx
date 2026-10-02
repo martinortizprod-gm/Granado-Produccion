@@ -377,17 +377,17 @@ export function ProduccionClient({ datos, puedeEditar }: { datos: DatosProduccio
       {error && <p className="text-[13px] text-[var(--color-danger)]">{error}</p>}
 
       <div className="g-kpis grid grid-cols-2 gap-2 xl:grid-cols-4">
-        <Tarjeta tono="mint" icono={<IconCheck className="h-5 w-5" />} titulo="Pendientes" valor={String(kpis.pendientes)} pie="Aún sin completar" />
-        <Tarjeta tono="blue" icono={<IconFactory className="h-5 w-5" />} titulo="En producción" valor={String(kpis.curso)} pie="Con consumo cargado" />
-        <Tarjeta tono="violet" icono={<IconCheck className="h-5 w-5" />} titulo="Completadas" valor={String(kpis.completadas)} pie="Lote cerrado" />
+        <Tarjeta tono="mint" icono={<IconCheck className="h-5 w-5" />} titulo="Pendientes" valor={String(kpis.pendientes)} pie="Sin iniciar" />
+        <Tarjeta tono="blue" icono={<IconFactory className="h-5 w-5" />} titulo="En producción" valor={String(kpis.curso)} pie="Iniciada, sin finalizar" />
+        <Tarjeta tono="violet" icono={<IconCheck className="h-5 w-5" />} titulo="Completadas" valor={String(kpis.completadas)} pie="Finalizada" />
         <Tarjeta tono="sage" icono={<IconPackage className="h-5 w-5" />} titulo="Pallets pendientes" valor={nroVisible(kpis.pallets)} pie="De solicitudes activas" />
       </div>
 
       <div className="g-card space-y-2 p-4">
         <label className="block text-[12px] text-[var(--color-text-muted)]">
-          Solicitud pendiente
+          Solicitud abierta
           <select className="g-input mt-1" value={sel} onChange={(e) => elegir(e.target.value)}>
-            <option value="">Elegí una solicitud pendiente</option>
+            <option value="">Elegí una solicitud sin finalizar</option>
             <option value="paradas">{ETIQUETA_PARADAS}</option>
             {opciones.map((item) => (
               <option key={item.id} value={String(item.id)}>

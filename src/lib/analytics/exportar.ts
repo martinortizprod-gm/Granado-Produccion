@@ -12,6 +12,7 @@ import {
 } from "@/lib/analytics/logic";
 import {
   FAMILIAS_STOCK,
+  corteStockPeriodo,
   resumenStock,
   type DatosStockAnalytics,
   type FamiliaStock,
@@ -108,7 +109,7 @@ function filtros(input: FiltrosExportAnalytics): Fila[] {
   } else {
     out.push(fila("Filtros", "Familia", etiquetaFamilia(input.familia)));
     if (input.familia !== "Todas") {
-      const etiqueta = CATALOGOS[input.familia].etiquetaItem;
+      const etiqueta = input.familia === "productos" ? "Producto" : CATALOGOS[input.familia].etiquetaItem;
       out.push(fila("Filtros", etiqueta, input.articulo || "Todos"));
     }
   }
@@ -196,7 +197,26 @@ function filasProduccion(
   return out;
 }
 
+function filasCorte(datos: DatosStockAnalytics, input: FiltrosExportAnalytics): Fila[] {
+  return corteStockPeriodo(datos, {
+    desde: input.desde,
+    hasta: input.hasta,
+    familia: input.familia,
+    articulo: input.articulo,
+  }).map((item) =>
+    fila(
+      "Stock del período",
+      etiquetaFamilia(item.familia),
+      item.articulo,
+      `Inicial ${fmtCant(item.inicial, item.unidad)} · Ingresos ${fmtCant(item.ingresos, item.unidad)} · Egresos ${fmtCant(item.egresos, item.unidad)} · Consumos ${fmtCant(item.consumos, item.unidad)}`,
+      `Final ${fmtCant(item.final, item.unidad)}`,
+    ),
+  );
+}
+
 function filasStock(datos: DatosStockAnalytics, input: FiltrosExportAnalytics): Fila[] {
+  const corte = filasCorte(datos, input);
+  if (input.familia === "productos") return corte;
   const resumen = resumenStock(datos, {
     desde: input.desde,
     hasta: input.hasta,
@@ -258,7 +278,7 @@ function filasStock(datos: DatosStockAnalytics, input: FiltrosExportAnalytics): 
       ),
     );
   }
-  return out;
+  return [...corte, ...out];
 }
 
 export function armarInformeAnalytics(
