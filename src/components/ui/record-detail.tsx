@@ -125,12 +125,12 @@ export function RecordDetailDrawer({
         </p>
         <button
           type="button"
-          className="g-btn g-btn-ghost h-7 w-7 px-0"
+          className="g-btn g-btn-icon h-7 w-7 shrink-0"
           title="Cerrar detalle"
           aria-label="Cerrar detalle"
           onClick={onClose}
         >
-          <IconClose className="h-3.5 w-3.5" />
+          <IconClose className="h-4 w-4" />
         </button>
       </div>
       <div className="overflow-y-auto p-3.5">

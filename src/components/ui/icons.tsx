@@ -375,6 +375,7 @@ const MAP: Record<ModuloId, (p: IconProps) => ReactNode> = {
   analytics: IconChart,
   "consultas-ia": IconSpark,
   contabilidad: IconCalculator,
+  cotizaciones: IconDollar,
   usuarios: IconUsers,
   respaldos: IconDatabase,
 };

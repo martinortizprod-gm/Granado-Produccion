@@ -70,6 +70,7 @@ cross join (
     ('analytics'),
     ('consultas-ia'),
     ('contabilidad'),
+    ('cotizaciones'),
     ('usuarios'),
     ('respaldos')
 ) as m(modulo)
@@ -102,6 +103,7 @@ cross join (
     ('analytics', false, false, false),
     ('consultas-ia', false, false, false),
     ('contabilidad', false, false, false),
+    ('cotizaciones', false, false, false),
     ('usuarios', false, false, false),
     ('respaldos', false, false, false)
 ) as m(modulo, ver, leer, editar)

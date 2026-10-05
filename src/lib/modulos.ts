@@ -16,6 +16,7 @@ export const MODULOS = [
   { id: "analytics", label: "Data Analytics", href: "/analytics" },
   { id: "consultas-ia", label: "Consultas IA", href: "/consultas-ia" },
   { id: "contabilidad", label: "Contabilidad", href: "/contabilidad" },
+  { id: "cotizaciones", label: "Cotizaciones", href: "/cotizaciones" },
   { id: "usuarios", label: "Usuarios", href: "/usuarios" },
   { id: "respaldos", label: "Respaldos", href: "/respaldos" },
 ] as const;
@@ -59,7 +60,7 @@ export const GRUPOS_NAV: { id: string; label: string; modulos: ModuloId[] }[] =
     {
       id: "contabilidad",
       label: "Contabilidad",
-      modulos: ["contabilidad"],
+      modulos: ["contabilidad", "cotizaciones"],
     },
     {
       id: "sistema",
