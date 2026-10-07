@@ -2,7 +2,8 @@
 
 import { FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { IconPlus, IconSearch } from "@/components/ui/icons";
+import { IconDownload, IconFile, IconPlus, IconSearch } from "@/components/ui/icons";
+import { DialogoInforme } from "@/components/ui/informe";
 import { ColumnPicker } from "@/components/ui/column-picker";
 import {
   RecordDetailDrawer,
@@ -32,6 +33,11 @@ import {
   resumenVersiones,
   siguienteNumero,
 } from "@/lib/recetas/logic";
+import {
+  descargarDetalleRecetaExcel,
+  descargarDetalleRecetaPdf,
+  nombreInformeReceta,
+} from "@/lib/recetas/informe";
 import { aFecha, fechaVisible } from "@/lib/solicitudes/logic";
 
 const COLS = [
@@ -104,6 +110,7 @@ export function RecetasClient({
   const [busqueda, setBusqueda] = useState("");
   const [soloSinFormula, setSoloSinFormula] = useState(false);
   const [detalleId, setDetalleId] = useState<number | null>(null);
+  const [exportar, setExportar] = useState(false);
   const [formVersion, setFormVersion] = useState<DatosVersionForm | null>(null);
   const [idVersion, setIdVersion] = useState<number | undefined>(undefined);
   const [formLinea, setFormLinea] = useState<DatosLineaForm | null>(null);
@@ -563,8 +570,31 @@ export function RecetasClient({
                 {detalle.numero ? `v${detalle.numero}` : "—"}
               </span>
             }
-            onClose={() => setDetalleId(null)}
+            onClose={() => {
+              setDetalleId(null);
+              setExportar(false);
+            }}
           >
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className="g-btn g-btn-secondary h-8 w-full px-2 text-[12px]"
+                title="Guardar detalle en Excel"
+                onClick={() => setExportar(true)}
+              >
+                <IconDownload className="h-3.5 w-3.5" />
+                Excel
+              </button>
+              <button
+                type="button"
+                className="g-btn g-btn-secondary h-8 w-full px-2 text-[12px]"
+                title="Guardar detalle en PDF"
+                onClick={() => setExportar(true)}
+              >
+                <IconFile className="h-3.5 w-3.5" />
+                PDF
+              </button>
+            </div>
             <dl className="space-y-1 text-[13px]">
               <Fila label="Producto" valor={detalle.producto || "—"} />
               <Fila label="Código" valor={detalle.codigo_producto || "Pendiente"} />
@@ -629,6 +659,25 @@ export function RecetasClient({
           </RecordDetailDrawer>
         ) : null}
       </div>
+
+      {exportar && detalle ? (
+        <DialogoInforme
+          titulo="Detalle de receta"
+          nombreInicial={nombreInformeReceta(detalle)}
+          hoja="Receta"
+          encabezados={["Código", "Ingrediente", "Tipo", "Puesto", "Participación"]}
+          filas={detalle.lineas.map((linea) => [
+            linea.codigo_ingrediente || "—",
+            linea.ingrediente || "—",
+            linea.tipo_etiqueta,
+            linea.puesto || "—",
+            pctTexto(linea.participacion_pct),
+          ])}
+          onExcel={(nombre) => descargarDetalleRecetaExcel(nombre, detalle)}
+          onPdf={(nombre) => descargarDetalleRecetaPdf(nombre, detalle)}
+          onCerrar={() => setExportar(false)}
+        />
+      ) : null}
     </div>
   );
 }

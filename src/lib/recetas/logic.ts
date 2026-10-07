@@ -168,9 +168,10 @@ export function armarVersiones(
     porVersion.set(idVersion, lista);
   }
   for (const lista of porVersion.values()) {
-    lista.sort(
-      (a, b) => a.puesto - b.puesto || a.tipo.localeCompare(b.tipo, "es") || a.id - b.id,
-    );
+    lista.sort((a, b) => {
+      const peso = (tipo: string) => (tipo === "macro" ? 0 : tipo === "micro" ? 1 : 2);
+      return peso(a.tipo) - peso(b.tipo) || a.puesto - b.puesto || a.id - b.id;
+    });
   }
 
   const vistas: VersionVista[] = [];
