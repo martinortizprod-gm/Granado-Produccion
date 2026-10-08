@@ -171,6 +171,22 @@ export type InformeStock = {
   resumen: { ordenes: number; consumoTotal: number; itemsFaltante: number; estado: string; alertas: { tipo: string; texto: string }[] };
 };
 
+export type FamiliaConsumo = "ingrediente" | "envase" | "etiqueta" | "insumo";
+
+export type ConsumoLinea = {
+  id: number;
+  fecha: string | null;
+  familia: FamiliaConsumo;
+  codigo: string;
+  articulo: string;
+  loteArticulo: string;
+  cantidad: number;
+  unidad: string;
+  idSolicitud: number | null;
+  loteProducto: string;
+  producto: string;
+};
+
 export type DatosProduccion = {
   solicitudes: SolicitudVista[];
   usuarios: UsuarioOpcion[];
@@ -188,6 +204,7 @@ export type DatosProduccion = {
   resumenes: Record<string, ResumenConsumo>;
   articulos: { id: number; tipo: string; idOrigen: number | null; codigo: string }[];
   consumosRef: { id: number; idSolicitud: number | null; fecha: string | null }[];
+  consumosLinea: ConsumoLinea[];
   cierresProducto: { id: number; idProduccion: number }[];
   limpiezasRef: { id: number; idSolicitud: number | null; fecha: string | null }[];
   error: string | null;
@@ -331,6 +348,19 @@ function mapaId(filas: Record<string, unknown>[]) {
 }
 
 type Art = { id: number; tipo: string; idOrigen: number | null; codigo: string; nombre: string };
+
+const FAMILIAS_CONSUMO: FamiliaConsumo[] = ["ingrediente", "envase", "etiqueta", "insumo"];
+
+function esFamiliaConsumo(tipo: string): tipo is FamiliaConsumo {
+  return (FAMILIAS_CONSUMO as string[]).includes(tipo);
+}
+
+function unidadConsumo(familia: FamiliaConsumo) {
+  if (familia === "ingrediente") return CATALOGOS.ingredientes.unidad;
+  if (familia === "envase") return CATALOGOS.envases.unidad;
+  if (familia === "etiqueta") return CATALOGOS.etiquetas.unidad;
+  return CATALOGOS.insumos.unidad;
+}
 
 function articulosDe(filas: Record<string, unknown>[]): Art[] {
   const lista: Art[] = [];
@@ -1182,6 +1212,32 @@ export function armarProduccion(crudo: {
       fecha: aFecha(fila.fecha_registro),
     }))
     .filter((fila): fila is { id: number; idSolicitud: number | null; fecha: string | null } => fila.id != null);
+  const consumosLinea: ConsumoLinea[] = [];
+  for (const fila of crudo.consumos) {
+    const id = idEntero(fila.id);
+    const art = porArt.get(idEntero(fila.id_articulo) ?? -1);
+    if (id == null || !art || !esFamiliaConsumo(art.tipo)) continue;
+    const cantidad = numero(fila.cantidad);
+    if (Math.abs(cantidad) <= 0.0005) continue;
+    const idSol = idEntero(fila.id_solicitud);
+    const solicitud = idSol != null ? porIdSol.get(idSol) : undefined;
+    consumosLinea.push({
+      id,
+      fecha: aFecha(fila.fecha_registro),
+      familia: art.tipo,
+      codigo: art.codigo,
+      articulo: art.nombre || art.codigo,
+      loteArticulo: texto(fila.lote_articulo),
+      cantidad,
+      unidad: unidadConsumo(art.tipo),
+      idSolicitud: idSol,
+      loteProducto: solicitud?.lote ?? "",
+      producto: solicitud?.producto ?? "",
+    });
+  }
+  consumosLinea.sort(
+    (a, b) => (b.fecha ?? "").localeCompare(a.fecha ?? "") || clave(a.articulo).localeCompare(clave(b.articulo), "es") || b.id - a.id,
+  );
   const cierresProducto: { id: number; idProduccion: number }[] = [];
   for (const fila of crudo.movProd) {
     const id = idEntero(fila.id);
@@ -1216,6 +1272,7 @@ export function armarProduccion(crudo: {
     resumenes,
     articulos,
     consumosRef,
+    consumosLinea,
     cierresProducto,
     limpiezasRef,
     error: null,
@@ -1240,6 +1297,7 @@ export function vacio(): DatosProduccion {
     resumenes: {},
     articulos: [],
     consumosRef: [],
+    consumosLinea: [],
     cierresProducto: [],
     limpiezasRef: [],
     error: null,

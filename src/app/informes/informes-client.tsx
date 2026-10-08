@@ -8,25 +8,32 @@ import { useColumnVisibility, type ColDef } from "@/components/ui/use-column-vis
 import { fmtHs, fmtKg, fmtPct } from "@/lib/analytics/logic";
 import {
   armarInformeConsumoReceta,
+  armarInformeConsumos,
   armarInformeHojaLote,
   armarInformeSolicitudesVs,
   type InformeFicha,
 } from "@/lib/informes/exportar";
 import {
+  FAMILIAS_CONSUMO,
   armarConsumoVsReceta,
   armarHojaLote,
   armarSolicitudesVsProducido,
+  SIN_LOTE_ARTICULO,
+  claveArticuloConsumo,
+  etiquetaFamiliaConsumo,
+  filtrarConsumos,
   opcionesLote,
+  type FiltroFamiliaConsumo,
 } from "@/lib/informes/logic";
 import { diasDelMes, etiquetaMes, hoyIso, primerDiaMes } from "@/lib/planificacion/logic";
-import { nroDec, type DatosProduccion } from "@/lib/produccion/logic";
+import { nroDec, type ConsumoLinea, type DatosProduccion } from "@/lib/produccion/logic";
 import {
   colorEstado,
   fechaVisible,
   nroVisible,
 } from "@/lib/solicitudes/logic";
 
-type FichaId = "lote" | "receta" | "comparativo";
+type FichaId = "lote" | "receta" | "comparativo" | "consumo";
 
 const COLS_VS: ColDef[] = [
   { id: "lote", label: "Lote" },
@@ -42,13 +49,32 @@ const COLS_VS: ColDef[] = [
   { id: "fuente", label: "Fuente" },
 ];
 
-function mesesConDatos(solicitudes: DatosProduccion["solicitudes"], hoy: string) {
+const COLS_CONSUMO: ColDef[] = [
+  { id: "fecha", label: "Fecha" },
+  { id: "familia", label: "Tipo" },
+  { id: "articulo", label: "Artículo" },
+  { id: "loteArt", label: "Lote artículo" },
+  { id: "cantidad", label: "Cantidad" },
+  { id: "loteProd", label: "Lote producto" },
+  { id: "producto", label: "Producto" },
+];
+
+function mesesConDatos(
+  solicitudes: DatosProduccion["solicitudes"],
+  consumos: DatosProduccion["consumosLinea"],
+  hoy: string,
+) {
   const actual = primerDiaMes(hoy);
   const meses = new Set<string>([actual]);
   for (const item of solicitudes) {
     const fecha = item.fecha_estimada || item.fecha_fin || item.fecha_registro;
     if (!fecha) continue;
     const mes = primerDiaMes(fecha);
+    if (mes <= actual) meses.add(mes);
+  }
+  for (const item of consumos) {
+    if (!item.fecha) continue;
+    const mes = primerDiaMes(item.fecha);
     if (mes <= actual) meses.add(mes);
   }
   return [...meses].sort((a, b) => (a < b ? 1 : -1));
@@ -59,11 +85,19 @@ export function InformesClient({ datos }: { datos: DatosProduccion }) {
   const mesActual = primerDiaMes(hoy);
   const [ficha, setFicha] = useState<FichaId>("comparativo");
   const [idSolicitud, setIdSolicitud] = useState("");
+  const [familiaConsumo, setFamiliaConsumo] = useState<FiltroFamiliaConsumo>("todas");
+  const [articuloConsumo, setArticuloConsumo] = useState("");
+  const [loteArticulo, setLoteArticulo] = useState("");
+  const [desdeConsumo, setDesdeConsumo] = useState(() => primerDiaMes(mesActual));
+  const [hastaConsumo, setHastaConsumo] = useState(() => diasDelMes(mesActual).at(-1) ?? primerDiaMes(mesActual));
   const [mes, setMes] = useState(mesActual);
   const desde = primerDiaMes(mes);
   const hasta = diasDelMes(mes).at(-1) ?? desde;
   const [informe, setInforme] = useState<InformeFicha | null>(null);
-  const meses = useMemo(() => mesesConDatos(datos.solicitudes, hoy), [datos.solicitudes, hoy]);
+  const meses = useMemo(
+    () => mesesConDatos(datos.solicitudes, datos.consumosLinea, hoy),
+    [datos.solicitudes, datos.consumosLinea, hoy],
+  );
   const lotes = useMemo(() => opcionesLote(datos.solicitudes), [datos.solicitudes]);
   const idElegido = Number(idSolicitud) || 0;
   const hoja = useMemo(
@@ -78,13 +112,89 @@ export function InformesClient({ datos }: { datos: DatosProduccion }) {
     () => armarSolicitudesVsProducido(datos.solicitudes, desde, hasta),
     [datos.solicitudes, desde, hasta],
   );
+  const baseConsumo = useMemo(
+    () => ({ desde: desdeConsumo, hasta: hastaConsumo, idSolicitud: idElegido }),
+    [desdeConsumo, hastaConsumo, idElegido],
+  );
+  const opcionesArticulo = useMemo(() => {
+    const vistos = new Map<string, string>();
+    for (const item of filtrarConsumos(datos.consumosLinea, { ...baseConsumo, familia: familiaConsumo })) {
+      const id = claveArticuloConsumo(item);
+      if (!vistos.has(id)) vistos.set(id, nombreArticulo(item));
+    }
+    return [...vistos.entries()]
+      .map(([id, etiqueta]) => ({ id, etiqueta }))
+      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, "es"));
+  }, [datos.consumosLinea, baseConsumo, familiaConsumo]);
+  const articuloActivo = opcionesArticulo.some((item) => item.id === articuloConsumo) ? articuloConsumo : "";
+  const opcionesLoteArticulo = useMemo(() => {
+    const vistos = new Map<string, string>();
+    let haySinLote = false;
+    for (const item of filtrarConsumos(datos.consumosLinea, {
+      ...baseConsumo,
+      familia: familiaConsumo,
+      articulo: articuloActivo,
+    })) {
+      if (!item.loteArticulo) {
+        haySinLote = true;
+        continue;
+      }
+      if (!vistos.has(item.loteArticulo)) vistos.set(item.loteArticulo, item.loteArticulo);
+    }
+    const lista = [...vistos.values()].sort((a, b) => a.localeCompare(b, "es"));
+    return { lista, haySinLote };
+  }, [datos.consumosLinea, baseConsumo, familiaConsumo, articuloActivo]);
+  const loteActivo =
+    loteArticulo === SIN_LOTE_ARTICULO
+      ? opcionesLoteArticulo.haySinLote
+        ? SIN_LOTE_ARTICULO
+        : ""
+      : opcionesLoteArticulo.lista.includes(loteArticulo)
+        ? loteArticulo
+        : "";
+  const consumosPeriodo = useMemo(
+    () =>
+      filtrarConsumos(datos.consumosLinea, {
+        ...baseConsumo,
+        familia: "todas",
+        articulo: articuloActivo,
+        loteArticulo: loteActivo,
+      }),
+    [datos.consumosLinea, baseConsumo, articuloActivo, loteActivo],
+  );
+  const consumos = useMemo(
+    () =>
+      filtrarConsumos(datos.consumosLinea, {
+        ...baseConsumo,
+        familia: familiaConsumo,
+        articulo: articuloActivo,
+        loteArticulo: loteActivo,
+      }),
+    [datos.consumosLinea, baseConsumo, familiaConsumo, articuloActivo, loteActivo],
+  );
   const colsVs = useColumnVisibility("informes-vs-producido", COLS_VS);
   const showVs = colsVs.isVisible;
+  const colsConsumo = useColumnVisibility("informes-consumo-articulos", COLS_CONSUMO);
+  const showConsumo = colsConsumo.isVisible;
 
   function abrir(id: FichaId) {
     if (id === "lote" && hoja) setInforme(armarInformeHojaLote(hoja));
     else if (id === "receta" && receta) setInforme(armarInformeConsumoReceta(receta));
     else if (id === "comparativo") setInforme(armarInformeSolicitudesVs(comparativo, desde, hasta));
+    else if (id === "consumo") setInforme(armarInformeConsumos(consumos, desdeConsumo, hastaConsumo));
+  }
+
+  function cambiarMes(valor: string) {
+    setMes(valor);
+    const inicio = primerDiaMes(valor);
+    setDesdeConsumo(inicio);
+    setHastaConsumo(diasDelMes(valor).at(-1) ?? inicio);
+  }
+
+  function cambiarFamiliaConsumo(valor: FiltroFamiliaConsumo) {
+    setFamiliaConsumo(valor);
+    setArticuloConsumo((actual) => (!actual || valor === "todas" || actual.startsWith(`${valor}\t`) ? actual : ""));
+    setLoteArticulo("");
   }
 
   return (
@@ -118,7 +228,7 @@ export function InformesClient({ datos }: { datos: DatosProduccion }) {
           </label>
           <label>
             <span className="g-label">Mes</span>
-            <select className="g-input" value={mes} onChange={(e) => setMes(e.target.value)}>
+            <select className="g-input" value={mes} onChange={(e) => cambiarMes(e.target.value)}>
               {meses.map((item) => (
                 <option key={item} value={item}>
                   {etiquetaMes(item)}
@@ -129,7 +239,7 @@ export function InformesClient({ datos }: { datos: DatosProduccion }) {
         </div>
       </div>
 
-      <div className="grid gap-2 lg:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <CardFicha
           activa={ficha === "lote"}
           titulo="Hoja de lote"
@@ -180,12 +290,48 @@ export function InformesClient({ datos }: { datos: DatosProduccion }) {
           onVer={() => setFicha("comparativo")}
           onExportar={() => abrir("comparativo")}
         />
+        <CardFicha
+          activa={ficha === "consumo"}
+          titulo="Consumo de artículos"
+          pie="Fecha, lote del artículo, cantidad y lote del producto"
+          lineas={[
+            { label: "Ingredientes", valor: String(consumosPeriodo.filter((item) => item.familia === "ingrediente").length) },
+            { label: "Envases", valor: String(consumosPeriodo.filter((item) => item.familia === "envase").length) },
+            { label: "Etiquetas", valor: String(consumosPeriodo.filter((item) => item.familia === "etiqueta").length) },
+            { label: "Insumos", valor: String(consumosPeriodo.filter((item) => item.familia === "insumo").length) },
+          ]}
+          puedeExportar={consumos.length > 0}
+          onVer={() => setFicha("consumo")}
+          onExportar={() => abrir("consumo")}
+        />
       </div>
 
       {ficha === "lote" ? (
         <VistaHoja hoja={hoja} />
       ) : ficha === "receta" ? (
         <VistaReceta receta={receta} />
+      ) : ficha === "consumo" ? (
+        <VistaConsumo
+          lineas={consumos}
+          familia={familiaConsumo}
+          onFamilia={cambiarFamiliaConsumo}
+          desde={desdeConsumo}
+          hasta={hastaConsumo}
+          onDesde={setDesdeConsumo}
+          onHasta={setHastaConsumo}
+          articulo={articuloActivo}
+          articulos={opcionesArticulo}
+          onArticulo={(valor) => {
+            setArticuloConsumo(valor);
+            setLoteArticulo("");
+          }}
+          lote={loteActivo}
+          lotes={opcionesLoteArticulo.lista}
+          haySinLote={opcionesLoteArticulo.haySinLote}
+          onLote={setLoteArticulo}
+          show={showConsumo}
+          cols={colsConsumo}
+        />
       ) : (
         <VistaComparativo
           comparativo={comparativo}
@@ -580,6 +726,156 @@ function VistaComparativo({
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function nombreArticulo(item: ConsumoLinea) {
+  if (item.codigo && item.articulo && item.codigo !== item.articulo) return `${item.codigo} — ${item.articulo}`;
+  return item.articulo || item.codigo || "—";
+}
+
+function VistaConsumo({
+  lineas,
+  familia,
+  onFamilia,
+  desde,
+  hasta,
+  onDesde,
+  onHasta,
+  articulo,
+  articulos,
+  onArticulo,
+  lote,
+  lotes,
+  haySinLote,
+  onLote,
+  show,
+  cols,
+}: {
+  lineas: ConsumoLinea[];
+  familia: FiltroFamiliaConsumo;
+  onFamilia: (familia: FiltroFamiliaConsumo) => void;
+  desde: string;
+  hasta: string;
+  onDesde: (valor: string) => void;
+  onHasta: (valor: string) => void;
+  articulo: string;
+  articulos: { id: string; etiqueta: string }[];
+  onArticulo: (valor: string) => void;
+  lote: string;
+  lotes: string[];
+  haySinLote: boolean;
+  onLote: (valor: string) => void;
+  show: (id: string) => boolean;
+  cols: ReturnType<typeof useColumnVisibility>;
+}) {
+  const visibles = COLS_CONSUMO.filter((col) => show(col.id)).length;
+  return (
+    <div className="g-stack">
+      <div className="g-table-wrap">
+        <div className="g-table-toolbar">
+          <div className="g-filters">
+            <label>
+              <span className="g-label">Tipo</span>
+              <select
+                className="g-input"
+                value={familia}
+                onChange={(e) => onFamilia(e.target.value as FiltroFamiliaConsumo)}
+              >
+                {FAMILIAS_CONSUMO.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="g-label">Fecha desde</span>
+              <input type="date" className="g-input" value={desde} onChange={(e) => onDesde(e.target.value)} />
+            </label>
+            <label>
+              <span className="g-label">Fecha hasta</span>
+              <input type="date" className="g-input" value={hasta} onChange={(e) => onHasta(e.target.value)} />
+            </label>
+            <label>
+              <span className="g-label">Artículo</span>
+              <select className="g-input" value={articulo} onChange={(e) => onArticulo(e.target.value)}>
+                <option value="">Todos</option>
+                {articulos.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="g-label">Lote del artículo</span>
+              <select className="g-input" value={lote} onChange={(e) => onLote(e.target.value)}>
+                <option value="">Todos</option>
+                {haySinLote ? <option value={SIN_LOTE_ARTICULO}>Sin lote</option> : null}
+                {lotes.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <ColumnPicker cols={cols.cols} isVisible={cols.isVisible} onToggle={cols.toggle} />
+        </div>
+        <div className="g-table-scroll g-table-scroll-ops">
+          <table className="g-table">
+            <thead>
+              <tr>
+                {show("fecha") ? <th>Fecha</th> : null}
+                {show("familia") ? <th>Tipo</th> : null}
+                {show("articulo") ? <th>Artículo</th> : null}
+                {show("loteArt") ? <th>Lote artículo</th> : null}
+                {show("cantidad") ? <th>Cantidad</th> : null}
+                {show("loteProd") ? <th>Lote producto</th> : null}
+                {show("producto") ? <th>Producto</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {lineas.length === 0 ? (
+                <tr>
+                  <td colSpan={Math.max(1, visibles)} className="text-[var(--color-text-muted)]">
+                    No hay consumos en el período con estos filtros.
+                  </td>
+                </tr>
+              ) : (
+                lineas.map((item) => (
+                  <tr key={item.id}>
+                    {show("fecha") ? <td>{fechaVisible(item.fecha)}</td> : null}
+                    {show("familia") ? <td>{etiquetaFamiliaConsumo(item.familia)}</td> : null}
+                    {show("articulo") ? (
+                      <td className="g-truncate" title={nombreArticulo(item)}>
+                        {nombreArticulo(item)}
+                      </td>
+                    ) : null}
+                    {show("loteArt") ? <td>{item.loteArticulo || "—"}</td> : null}
+                    {show("cantidad") ? (
+                      <td className="tabular-nums">
+                        {nroVisible(item.cantidad, 3)} {item.unidad}
+                      </td>
+                    ) : null}
+                    {show("loteProd") ? <td>{item.loteProducto || "—"}</td> : null}
+                    {show("producto") ? (
+                      <td className="g-truncate" title={item.producto}>
+                        {item.producto || "—"}
+                      </td>
+                    ) : null}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p className="text-[12px] text-[var(--color-text-muted)]">
+        El lote del artículo queda vacío cuando el consumo se registró sin lote. El lote del producto es el de la solicitud.
+      </p>
     </div>
   );
 }

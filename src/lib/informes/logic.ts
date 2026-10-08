@@ -6,9 +6,12 @@ import {
   etiquetaSolicitud,
   kgNecesarios,
   type CierreVista,
+  type ConsumoLinea,
+  type FamiliaConsumo,
 } from "@/lib/produccion/logic";
 import {
   SolicitudVista,
+  clave,
   filtrarSolicitudes,
   texto,
 } from "@/lib/solicitudes/logic";
@@ -251,6 +254,58 @@ export function armarSolicitudesVsProducido(
     conProduccion: filas.filter((item) => item.fuente === "produccion").length,
     sinProduccion: filas.filter((item) => item.fuente !== "produccion").length,
   };
+}
+
+export type FiltroFamiliaConsumo = FamiliaConsumo | "todas";
+
+export const FAMILIAS_CONSUMO: { id: FiltroFamiliaConsumo; label: string }[] = [
+  { id: "todas", label: "Todos" },
+  { id: "ingrediente", label: "Ingredientes" },
+  { id: "envase", label: "Envases" },
+  { id: "etiqueta", label: "Etiquetas" },
+  { id: "insumo", label: "Insumos" },
+];
+
+export function etiquetaFamiliaConsumo(familia: FamiliaConsumo) {
+  if (familia === "ingrediente") return "Ingrediente";
+  if (familia === "envase") return "Envase";
+  if (familia === "etiqueta") return "Etiqueta";
+  return "Insumo";
+}
+
+export const SIN_LOTE_ARTICULO = "__sin__";
+
+export function claveArticuloConsumo(item: ConsumoLinea) {
+  return `${item.familia}\t${item.codigo}\t${item.articulo}`;
+}
+
+export function filtrarConsumos(
+  lineas: ConsumoLinea[],
+  opts: {
+    desde: string;
+    hasta: string;
+    familia: FiltroFamiliaConsumo;
+    idSolicitud: number;
+    articulo?: string;
+    loteArticulo?: string;
+  },
+): ConsumoLinea[] {
+  const articulo = texto(opts.articulo);
+  const lote = texto(opts.loteArticulo);
+  return lineas.filter((item) => {
+    const fecha = item.fecha ?? "";
+    if (opts.desde && (!fecha || fecha < opts.desde)) return false;
+    if (opts.hasta && (!fecha || fecha > opts.hasta)) return false;
+    if (opts.familia !== "todas" && item.familia !== opts.familia) return false;
+    if (opts.idSolicitud && item.idSolicitud !== opts.idSolicitud) return false;
+    if (articulo && claveArticuloConsumo(item) !== articulo) return false;
+    if (lote === SIN_LOTE_ARTICULO) {
+      if (texto(item.loteArticulo)) return false;
+    } else if (lote && clave(item.loteArticulo) !== clave(lote)) {
+      return false;
+    }
+    return true;
+  });
 }
 
 export function nombreArchivoLote(prefijo: string, lote: string) {

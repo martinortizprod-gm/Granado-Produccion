@@ -1,10 +1,12 @@
 import { lineaEmision } from "@/lib/informes/emision";
 import {
+  etiquetaFamiliaConsumo,
   nombreArchivoLote,
   type ConsumoVsReceta,
   type HojaLote,
   type SolicitudesVsProducido,
 } from "@/lib/informes/logic";
+import type { ConsumoLinea } from "@/lib/produccion/logic";
 import { fmtHs, fmtKg, fmtPct } from "@/lib/analytics/logic";
 import { nroDec } from "@/lib/produccion/logic";
 import { fechaVisible, nroVisible } from "@/lib/solicitudes/logic";
@@ -227,6 +229,56 @@ export function armarInformeSolicitudesVs(
     titulo: "Solicitudes vs producido",
     nombreInicial: `solicitudes_vs_producido_${desde}_${hasta}`,
     hoja: "Comparativo",
+    encabezados,
+    filas,
+    filasPdf,
+  };
+}
+
+export function armarInformeConsumos(
+  lineas: ConsumoLinea[],
+  desde: string,
+  hasta: string,
+): InformeFicha {
+  const encabezados = [
+    "Fecha",
+    "Tipo",
+    "Artículo",
+    "Lote artículo",
+    "Cantidad",
+    "Unidad",
+    "Lote producto",
+    "Producto",
+  ];
+  const filas: Fila[] = lineas.map((item) => [
+    fechaVisible(item.fecha),
+    etiquetaFamiliaConsumo(item.familia),
+    item.codigo && item.articulo && item.codigo !== item.articulo
+      ? `${item.codigo} — ${item.articulo}`
+      : item.articulo || item.codigo,
+    item.loteArticulo,
+    Math.round(item.cantidad * 1000) / 1000,
+    item.unidad,
+    item.loteProducto,
+    item.producto,
+  ]);
+  const filasPdf = [
+    ["Período", `${fechaVisible(desde)} — ${fechaVisible(hasta)}`, `${lineas.length} consumos`, lineaEmision(), "", "", "", ""],
+    ...filas.map((item) => [
+      item[0],
+      item[1],
+      item[2],
+      item[3],
+      item[4] == null || item[4] === "" ? "" : nroVisible(Number(item[4]), 3),
+      item[5],
+      item[6],
+      item[7],
+    ]),
+  ];
+  return {
+    titulo: "Consumo de artículos",
+    nombreInicial: `consumo_articulos_${desde}_${hasta}`,
+    hoja: "Consumo",
     encabezados,
     filas,
     filasPdf,
