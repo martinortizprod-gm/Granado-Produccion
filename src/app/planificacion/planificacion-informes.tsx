@@ -2,6 +2,7 @@
 
 import { IconClose, IconDownload, IconFile } from "@/components/ui/icons";
 import { descargarExcel } from "@/lib/informes/descarga";
+import { descargarAnalisisHorasPdf } from "@/lib/planificacion/analisis-pdf";
 import { DatosPlan, etiquetaMes, HorasRealesDia } from "@/lib/planificacion/logic";
 import { fechaVisible } from "@/lib/solicitudes/logic";
 
@@ -212,7 +213,10 @@ function VistaAnalisis({ datos, onCerrar }: { datos: DatosPlan; onCerrar: () => 
       <div className="flex items-start justify-between gap-2">
         <h2 className="text-[18px] font-bold tracking-wide">ANÁLISIS DE HORAS — {analisis.etiqueta.toUpperCase()}</h2>
         <div className="flex gap-1">
-          <button type="button" className="g-btn g-btn-icon h-8 w-8" title="Guardar" aria-label="Guardar" onClick={guardar}>
+          <button type="button" className="g-btn g-btn-icon h-8 w-8" title="Descargar PDF" aria-label="Descargar PDF" onClick={() => descargarAnalisisHorasPdf(datos)}>
+            <IconDownload className="h-4 w-4" />
+          </button>
+          <button type="button" className="g-btn g-btn-icon h-8 w-8" title="Descargar Excel" aria-label="Descargar Excel" onClick={guardar}>
             <IconFile className="h-4 w-4" />
           </button>
           <button type="button" className="g-btn g-btn-icon h-8 w-8" title="Cerrar" aria-label="Cerrar" onClick={onCerrar}>

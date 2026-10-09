@@ -283,12 +283,14 @@ export function LeyendaHoras() {
 
 export function PanelPartes({
   titulo,
+  nota,
   partes,
   unidad,
   extra,
   onSeleccionar,
 }: {
   titulo: string;
+  nota?: string;
   partes: ParteIndicador[];
   unidad: "kg" | "h" | "kg/día" | "un";
   extra?: boolean;
@@ -297,7 +299,8 @@ export function PanelPartes({
   const max = maximo(partes.map((p) => p.valor));
   return (
     <div className="g-card flex h-full flex-col p-3">
-      <p className="g-section-title mb-2">{titulo}</p>
+      <p className={`g-section-title ${nota ? "mb-1" : "mb-2"}`}>{titulo}</p>
+      {nota ? <p className="mb-2 text-[11px] text-[var(--color-text-muted)]">{nota}</p> : null}
       {partes.length === 0 ? (
         <p className="text-[13px] text-[var(--color-text-muted)]">Sin datos para mostrar.</p>
       ) : (

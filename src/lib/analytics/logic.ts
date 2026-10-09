@@ -1,8 +1,11 @@
 /** Indicadores de Data Analytics. Puerto de services/analytics_service.py */
 
 import {
+  ESTADO_PENDIENTE,
+  ESTADO_PRODUCCION,
   aFecha,
   clave,
+  enriquecerSolicitud,
   fechaVisible,
   idEntero,
   numero,
@@ -44,6 +47,21 @@ export type ParteIndicador = {
   valor: number;
   porcentaje: number;
   extra: number;
+};
+
+export type PendienteEnvase = {
+  id: number;
+  fechaFin: string | null;
+  categoria: string;
+  producto: string;
+  envase: string;
+  kg: number;
+  unidades: number;
+  pallets: number;
+  idVersion: number | null;
+  idEnvase: number | null;
+  idEtiqueta: number | null;
+  etiqueta: string;
 };
 
 export type PuntoDiario = {
@@ -539,6 +557,74 @@ export function resumenAnalytics(
     false,
   );
   return datos;
+}
+
+export function armarPendienteEnvase(crudo: {
+  solicitudes: Record<string, unknown>[];
+  producciones: Record<string, unknown>[];
+  productos: Record<string, unknown>[];
+  envases: Record<string, unknown>[];
+  etiquetas: Record<string, unknown>[];
+}): PendienteEnvase[] {
+  const porSolicitud = new Map<number, { pallets: number; unidades: number; kg: number }>();
+  for (const fila of crudo.producciones) {
+    const idSol = idEntero(fila.id_solicitud);
+    if (idSol == null) continue;
+    const acum = porSolicitud.get(idSol) ?? { pallets: 0, unidades: 0, kg: 0 };
+    acum.pallets += numero(fila.pallets);
+    acum.unidades += numero(fila.unidades);
+    acum.kg += numero(fila.peso_kg);
+    porSolicitud.set(idSol, acum);
+  }
+  const productos = mapaFilas(crudo.productos);
+  const envases = mapaFilas(crudo.envases);
+  const etiquetas = mapaFilas(crudo.etiquetas);
+  const vacio = new Map<number, Record<string, unknown>>();
+  const out: PendienteEnvase[] = [];
+  for (const fila of crudo.solicitudes) {
+    const vista = enriquecerSolicitud(fila, porSolicitud, productos, vacio, envases, etiquetas);
+    if (vista.estado !== ESTADO_PENDIENTE && vista.estado !== ESTADO_PRODUCCION) continue;
+    if (
+      vista.kg_pendientes <= 0.0005 &&
+      vista.unidades_pendientes <= 0.0005 &&
+      vista.pallets_pendientes <= 0.0005
+    ) {
+      continue;
+    }
+    if (vista.id == null) continue;
+    out.push({
+      id: vista.id,
+      fechaFin: vista.fecha_estimada,
+      categoria: vista.categoria || SIN_CATEGORIA,
+      producto: vista.producto || "Sin producto",
+      envase: vista.envase || SIN_ENVASE,
+      kg: vista.kg_pendientes,
+      unidades: vista.unidades_pendientes,
+      pallets: vista.pallets_pendientes,
+      idVersion: vista.id_version,
+      idEnvase: vista.id_envase,
+      idEtiqueta: vista.id_etiqueta,
+      etiqueta: vista.nombre_etiqueta || "Sin etiqueta",
+    });
+  }
+  return out;
+}
+
+export function pendientePorEnvase(
+  items: PendienteEnvase[],
+  categoria: string,
+  producto: string,
+  envase: string,
+): ParteIndicador[] {
+  const mapa = new Map<string, number>();
+  for (const item of items) {
+    if (categoria !== "Todos" && item.categoria !== categoria) continue;
+    if (producto !== "Todos" && item.producto !== producto) continue;
+    if (envase !== "Todos" && item.envase !== envase) continue;
+    mapa.set(item.envase, (mapa.get(item.envase) ?? 0) + item.kg);
+  }
+  const total = [...mapa.values()].reduce((suma, valor) => suma + valor, 0);
+  return partesDe(mapa, total, false);
 }
 
 export function opcionesFiltro(jornadas: JornadaAnalytics[]) {

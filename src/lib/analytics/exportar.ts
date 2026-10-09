@@ -7,6 +7,7 @@ import {
   fmtKg,
   fmtKgH,
   fmtPct,
+  type ParteIndicador,
   type ResumenAnalytics,
   type ResumenPlanAnalytics,
 } from "@/lib/analytics/logic";
@@ -287,6 +288,7 @@ export function armarInformeAnalytics(
     plan: ResumenPlanAnalytics | null;
     anterior: ResumenAnalytics | null;
     stock: DatosStockAnalytics;
+    pendienteEnvase?: ParteIndicador[];
   },
 ): InformeAnalytics | null {
   if (!input.desde || !input.hasta) return null;
@@ -295,7 +297,12 @@ export function armarInformeAnalytics(
   const cuerpo =
     input.tab === "stock"
       ? filasStock(input.stock, input)
-      : filasProduccion(input.resumen!, input.plan, input.anterior, input.comparar);
+      : [
+          ...filasProduccion(input.resumen!, input.plan, input.anterior, input.comparar),
+          ...(input.pendienteEnvase ?? []).map((parte) =>
+            fila("Pendiente por envase", parte.nombre, fmtKg(parte.valor), fmtPct(parte.porcentaje)),
+          ),
+        ];
   const filas = [...filtros(input), ...cuerpo];
   const titulo = input.tab === "stock" ? "Data Analytics · Stock" : "Data Analytics · Producción";
   const hoja = input.tab === "stock" ? "Stock" : "Produccion";

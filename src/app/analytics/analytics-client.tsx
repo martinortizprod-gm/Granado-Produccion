@@ -36,6 +36,7 @@ import {
   fmtPct,
   mesesPeriodo,
   opcionesFiltro,
+  pendientePorEnvase,
   productosDeCategoria,
   rangoAnterior,
   rangoDePunto,
@@ -43,6 +44,7 @@ import {
   resumenPlan,
   type JornadaAnalytics,
   type LineaPlanAnalytics,
+  type PendienteEnvase,
   type ResumenAnalytics,
 } from "@/lib/analytics/logic";
 import {
@@ -54,15 +56,21 @@ import {
   PanelGrafico,
   PanelPartes,
 } from "@/app/analytics/analytics-charts";
+import { PanelResumenMes } from "@/app/analytics/analytics-resumen";
 import { AnalyticsStock } from "@/app/analytics/analytics-stock";
 import { AnalyticsTrazabilidad } from "@/app/analytics/analytics-trazabilidad";
 import { AnalyticsReportes } from "@/app/analytics/analytics-reportes";
 import { armarInformeAnalytics } from "@/lib/analytics/exportar";
+import { armarResumenMes, type DiaHoras, type InsumoUsado, type LineaRecetaResumen } from "@/lib/analytics/resumen-operativo";
 import { type DatosStockAnalytics, type FamiliaStock } from "@/lib/analytics/stock";
 
 type Props = {
   jornadas: JornadaAnalytics[];
   plan: LineaPlanAnalytics[];
+  pendientes: PendienteEnvase[];
+  horasDias: DiaHoras[];
+  recetas: LineaRecetaResumen[];
+  insumosUsados: InsumoUsado[];
   stock: DatosStockAnalytics;
   errorCarga: string | null;
 };
@@ -82,7 +90,16 @@ const COLS = [
 
 const PAGE = 50;
 
-export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
+export function AnalyticsClient({
+  jornadas,
+  plan,
+  pendientes,
+  horasDias,
+  recetas,
+  insumosUsados,
+  stock,
+  errorCarga,
+}: Props) {
   const meses = useMemo(() => mesesPeriodo(), []);
   const mesActual = meses[meses.length - 1];
   const [preset, setPreset] = useState(mesActual?.clave ?? PRESET_PERSONALIZADO);
@@ -97,6 +114,7 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
   const [familia, setFamilia] = useState<FamiliaStock>("Todas");
   const [articulo, setArticulo] = useState("Todos");
   const [exportar, setExportar] = useState(false);
+  const [resumenAbierto, setResumenAbierto] = useState(false);
   const [comparar, setComparar] = useState(true);
   const [seleccionId, setSeleccionId] = useState<number | null>(null);
   const [pagina, setPagina] = useState(0);
@@ -133,6 +151,27 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
     return resumenPlan(plan, resumen.diario, categoria, resumen.desde, resumen.hasta);
   }, [resumen, plan, categoria, producto]);
 
+  const pendienteEnvase = useMemo(
+    () => pendientePorEnvase(pendientes, categoria, producto, envase),
+    [pendientes, categoria, producto, envase],
+  );
+
+  const resumenMes = useMemo(() => {
+    if (!desde) return null;
+    return armarResumenMes({
+      mes: desde,
+      jornadas,
+      abiertas: pendientes,
+      dias: horasDias,
+      recetas,
+      insumosUsados,
+      stock,
+      categoria,
+      producto,
+      envase,
+    });
+  }, [desde, jornadas, pendientes, horasDias, recetas, insumosUsados, stock, categoria, producto, envase]);
+
   const informe = useMemo(
     () =>
       tab === "produccion" || tab === "stock"
@@ -151,9 +190,10 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
             plan: planActual,
             anterior: resumenAnt,
             stock,
+            pendienteEnvase,
           })
         : null,
-    [tab, desde, hasta, categoria, producto, envase, causa, familia, articulo, comparar, resumen, planActual, resumenAnt, stock],
+    [tab, desde, hasta, categoria, producto, envase, causa, familia, articulo, comparar, resumen, planActual, resumenAnt, stock, pendienteEnvase],
   );
 
   const seleccion = resumen?.detalle.find((j) => j.id === seleccionId) ?? null;
@@ -253,19 +293,34 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
             Indicadores de producción, stock y paradas a partir de los registros reales.
           </p>
         </div>
-        {tab === "produccion" || tab === "stock" ? (
-          <button
-            type="button"
-            className="g-btn g-btn-icon h-9 w-9"
-            title="Exportar recorte"
-            aria-label="Exportar recorte"
-            disabled={!informe}
-            onClick={() => setExportar(true)}
-          >
-            <IconDownload className="h-4 w-4" />
-          </button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {tab === "produccion" ? (
+            <button
+              type="button"
+              className="g-btn g-btn-secondary"
+              disabled={!resumenMes || !!errorFechas}
+              onClick={() => setResumenAbierto(true)}
+            >
+              <IconClipboard className="h-4 w-4" />
+              Resumen
+            </button>
+          ) : null}
+          {tab === "produccion" || tab === "stock" ? (
+            <button
+              type="button"
+              className="g-btn g-btn-icon h-9 w-9"
+              title="Exportar recorte"
+              aria-label="Exportar recorte"
+              disabled={!informe}
+              onClick={() => setExportar(true)}
+            >
+              <IconDownload className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {resumenAbierto && resumenMes ? <PanelResumenMes resumen={resumenMes} onCerrar={() => setResumenAbierto(false)} /> : null}
 
       {exportar && informe ? (
         <DialogoInforme
@@ -596,6 +651,13 @@ export function AnalyticsClient({ jornadas, plan, stock, errorCarga }: Props) {
               onSeleccionar={recortarEnvase}
             />
           </div>
+          <PanelPartes
+            titulo="Producción pendiente por tipo de envase"
+            nota="Kilos pedidos menos kilos ya producidos, en solicitudes sin finalizar. Es el saldo al día de hoy."
+            partes={pendienteEnvase}
+            unidad="kg"
+            onSeleccionar={recortarEnvase}
+          />
           <PanelPartes
             titulo="Promedio diario por categoría"
             partes={resumen.promedioCategoria}

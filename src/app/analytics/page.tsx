@@ -28,11 +28,20 @@ export default async function AnalyticsPage() {
     );
   }
 
-  const { jornadas, plan, stock, error } = await cargarAnalytics();
+  const { jornadas, plan, pendientes, horasDias, recetas, insumosUsados, stock, error } = await cargarAnalytics();
 
   return (
     <AppShell perfil={perfil} activo="analytics">
-      <AnalyticsClient jornadas={jornadas} plan={plan} stock={stock} errorCarga={error} />
+      <AnalyticsClient
+        jornadas={jornadas}
+        plan={plan}
+        pendientes={pendientes}
+        horasDias={horasDias}
+        recetas={recetas}
+        insumosUsados={insumosUsados}
+        stock={stock}
+        errorCarga={error}
+      />
     </AppShell>
   );
 }
